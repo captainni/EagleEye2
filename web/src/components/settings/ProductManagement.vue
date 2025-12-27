@@ -15,17 +15,27 @@
         <div v-if="products.length === 0" class="text-sm text-gray-500 text-center py-4">暂无产品，请添加。</div>
         <!-- Product Item -->
         <div v-for="(product, index) in products" :key="product.id"
-             class="product-item flex items-center justify-between bg-gray-50 p-3 rounded-md"
+             class="product-item flex items-center gap-4 bg-gray-50 p-4 rounded-md hover:bg-gray-100 transition-colors"
              :data-product-id="product.id">
-          <div>
-            <p class="product-name text-sm font-medium text-gray-700">{{ product.name }}</p>
-            <p class="product-type-features text-xs text-gray-500">
-              类型：{{ product.type }} | 特点：{{ product.features || '无' }}
+          <div class="flex-1 min-w-0">
+            <p class="product-name text-sm font-medium text-gray-900 mb-1">{{ product.name }}</p>
+            <p class="product-type text-xs text-gray-600 mb-1">类型：{{ product.type }}</p>
+            <p class="product-features text-xs text-gray-500">
+              <span class="font-medium">特点：</span>
+              <span class="truncate-inline" :title="product.features || '无'">
+                {{ product.features || '无' }}
+              </span>
             </p>
           </div>
-          <div>
-            <button @click="openEditModal(product)" class="edit-product-btn text-sm text-primary hover:underline mr-2">编辑</button>
-            <button @click="confirmDeleteProduct(product.id, index)" class="delete-product-btn text-sm text-danger hover:underline">删除</button>
+          <div class="flex-shrink-0 flex items-center gap-3 w-24 justify-end">
+            <button @click="openEditModal(product)"
+                    class="edit-product-btn text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-1.5 rounded transition-colors">
+              <i class="fas fa-edit mr-1"></i>编辑
+            </button>
+            <button @click="confirmDeleteProduct(product.id, index)"
+                    class="delete-product-btn text-sm text-red-600 hover:text-red-800 hover:bg-red-50 px-3 py-1.5 rounded transition-colors">
+              <i class="fas fa-trash-alt mr-1"></i>删除
+            </button>
           </div>
         </div>
       </div>
@@ -228,13 +238,30 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   padding-top: 16px;
-  border-top: 1px solid #e5e7eb; /* gray-200 */
+  border-top: 1px solid #e5e7eb;
   gap: 8px;
 }
+
 .product-item {
-  transition: background-color 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
 }
-.product-item:hover {
-  background-color: #f9fafb; /* gray-50 slightly darker on hover maybe? */
+
+/* 文本截断样式 - 限制最多显示2行，超出显示省略号 */
+.truncate-inline {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.5;
+  max-height: 3em; /* 2行 × 1.5 line-height */
+  word-break: break-word;
+}
+
+/* 按钮悬停效果 */
+.edit-product-btn:hover,
+.delete-product-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 </style> 
