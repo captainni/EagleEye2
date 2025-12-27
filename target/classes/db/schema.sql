@@ -238,4 +238,31 @@ CREATE TABLE `user_suggestion` (
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '逻辑删除标志 (0: 未删除, 1: 已删除)',
   PRIMARY KEY (`id`) USING BTREE,
   KEY `idx_user_suggestion_status` (`status`) USING BTREE COMMENT '状态索引'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci ROW_FORMAT=DYNAMIC COMMENT='用户建议表'; 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci ROW_FORMAT=DYNAMIC COMMENT='用户建议表';
+
+-- 用户产品表
+CREATE TABLE IF NOT EXISTS `user_product` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `name` varchar(255) NOT NULL COMMENT '产品名称',
+  `type` varchar(128) NOT NULL COMMENT '产品类型',
+  `features` text COMMENT '产品特点',
+  `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除：0-未删除，1-已删除',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户产品表';
+
+-- 用户设置表
+CREATE TABLE IF NOT EXISTS `user_settings` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `frequency` varchar(32) NOT NULL COMMENT '推送频率 (daily, weekly, monthly, never)',
+  `channels` text COMMENT '推送渠道 (JSON格式，如：["wechat", "site", "sms", "email"])',
+  `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除：0-未删除，1-已删除',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户设置表'; 
