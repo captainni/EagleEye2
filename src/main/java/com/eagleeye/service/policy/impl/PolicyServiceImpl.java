@@ -15,6 +15,7 @@ import com.eagleeye.repository.PolicyAnalysisRepository;
 import com.eagleeye.repository.PolicyRepository;
 import com.eagleeye.repository.PolicySuggestionRepository;
 import com.eagleeye.service.policy.PolicyService;
+import com.eagleeye.service.requirement.RequirementService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,9 +44,12 @@ public class PolicyServiceImpl implements PolicyService {
     
     @Resource
     private PolicySuggestionRepository policySuggestionRepository;
-    
+
     @Resource
     private ObjectMapper objectMapper;
+
+    @Resource
+    private RequirementService requirementService;
     
     @Override
     public CommonPage<PolicyVO> listPolicies(PolicyQueryDTO queryDTO) {
@@ -186,10 +190,15 @@ public class PolicyServiceImpl implements PolicyService {
     
     @Override
     public Long convertToRequirement(Long policyId, Long userId) {
-        // TODO: 实现将政策转为需求的功能
-        // 这里是一个示意，实际实现需要创建需求表相关代码
         log.info("将政策(id={})转为需求, 用户ID: {}", policyId, userId);
-        return -1L;
+        // 委托给 RequirementService 来实现转换逻辑
+        Long requirementId = requirementService.convertPolicyToRequirement(policyId);
+        if (requirementId != null) {
+            log.info("政策转需求成功, 需求ID: {}", requirementId);
+        } else {
+            log.warn("政策转需求失败, 政策ID: {}", policyId);
+        }
+        return requirementId;
     }
     
     /**
