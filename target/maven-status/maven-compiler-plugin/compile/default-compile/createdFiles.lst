@@ -6,6 +6,7 @@ com/eagleeye/repository/CrawlerConfigRepository.class
 com/eagleeye/service/settings/impl/SettingsServiceImpl$1.class
 com/eagleeye/service/settings/impl/SettingsServiceImpl$4.class
 com/eagleeye/model/vo/PolicySuggestionVO.class
+com/eagleeye/model/vo/OperationResult.class
 com/eagleeye/controller/requirement/RequirementController.class
 com/eagleeye/model/dto/CrawlerConfigUpdateDTO.class
 com/eagleeye/model/vo/CrawlerTaskLogVO.class

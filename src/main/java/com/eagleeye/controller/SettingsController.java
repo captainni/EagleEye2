@@ -4,6 +4,7 @@ import com.eagleeye.model.dto.ProductCreateDTO;
 import com.eagleeye.model.dto.ProductDTO;
 import com.eagleeye.model.dto.PushSettingsDTO;
 import com.eagleeye.model.vo.ApiResponseVO;
+import com.eagleeye.model.vo.OperationResult;
 import com.eagleeye.model.vo.ProductVO;
 import com.eagleeye.model.vo.SettingsDataVO;
 import com.eagleeye.service.settings.SettingsService;
@@ -51,16 +52,16 @@ public class SettingsController {
      * 更新我的产品
      */
     @PutMapping("/products/{productId}")
-    public ApiResponseVO<Void> updateMyProduct(@PathVariable Long productId,
-                                               @Valid @RequestBody ProductDTO productDTO) {
+    public ApiResponseVO<OperationResult> updateMyProduct(@PathVariable Long productId,
+                                                          @Valid @RequestBody ProductDTO productDTO) {
         Long userId = getCurrentUserId();
         productDTO.setId(productId);
         boolean success = settingsService.updateMyProduct(userId, productDTO);
 
         if (success) {
-            return ApiResponseVO.success("产品更新成功", null);
+            return ApiResponseVO.success("产品更新成功", OperationResult.success("产品更新成功"));
         } else {
-            return ApiResponseVO.error("产品更新失败");
+            return ApiResponseVO.success("产品更新失败", OperationResult.error("产品更新失败"));
         }
     }
 
@@ -68,14 +69,14 @@ public class SettingsController {
      * 删除我的产品
      */
     @DeleteMapping("/products/{productId}")
-    public ApiResponseVO<Void> deleteMyProduct(@PathVariable Long productId) {
+    public ApiResponseVO<OperationResult> deleteMyProduct(@PathVariable Long productId) {
         Long userId = getCurrentUserId();
         boolean success = settingsService.deleteMyProduct(userId, productId);
 
         if (success) {
-            return ApiResponseVO.success("产品删除成功", null);
+            return ApiResponseVO.success("产品删除成功", OperationResult.success("产品删除成功"));
         } else {
-            return ApiResponseVO.error("产品删除失败");
+            return ApiResponseVO.success("产品删除失败", OperationResult.error("产品删除失败"));
         }
     }
 
@@ -83,14 +84,14 @@ public class SettingsController {
      * 保存推送设置
      */
     @PostMapping("/push")
-    public ApiResponseVO<Void> savePushSettings(@Valid @RequestBody PushSettingsDTO pushSettingsDTO) {
+    public ApiResponseVO<OperationResult> savePushSettings(@Valid @RequestBody PushSettingsDTO pushSettingsDTO) {
         Long userId = getCurrentUserId();
         boolean success = settingsService.savePushSettings(userId, pushSettingsDTO);
 
         if (success) {
-            return ApiResponseVO.success("推送设置保存成功", null);
+            return ApiResponseVO.success("推送设置保存成功", OperationResult.success("推送设置保存成功"));
         } else {
-            return ApiResponseVO.error("推送设置保存失败");
+            return ApiResponseVO.success("推送设置保存失败", OperationResult.error("推送设置保存失败"));
         }
     }
 }
