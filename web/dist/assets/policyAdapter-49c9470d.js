@@ -1,0 +1,1 @@
+function i(n){var o;const e={...n};return typeof e.importance=="object"&&((o=e.importance)!=null&&o.label)?e.importance=e.importance.label:typeof e.importance=="number"&&(e.importance=String(e.importance)),e}function r(n){return n.map(i)}export{r as normalizePolicies,i as normalizePolicy};

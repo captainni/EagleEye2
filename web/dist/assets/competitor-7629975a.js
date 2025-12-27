@@ -1,0 +1,1 @@
+import{i as e}from"./request-211124dc.js";function r(t){return e({url:"/v1/competitors",method:"get",params:t})}function i(t){return e({url:`/v1/competitors/${t}`,method:"get"})}export{i as a,r as g};
