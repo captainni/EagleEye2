@@ -148,3 +148,120 @@ web/src/
 3. **RabbitMQ**：用于异步处理爬虫任务等耗时操作
 4. **Spring Security**：API 认证和授权
 5. **前端路由**：API 请求通过 Vite 代理转发到后端
+
+---
+
+## 开发环境启动命令
+
+### 1. Docker MySQL 数据库
+```bash
+# 启动 MySQL 容器（如果未运行）
+docker start my-mysql
+
+# 查看状态
+docker ps | grep mysql
+
+# 数据库连接信息
+# Host: localhost:3306
+# User: captain / Pass: 123456
+# Database: eagleeye
+```
+
+### 2. 后端服务 (Spring Boot)
+```bash
+# 项目根目录执行
+mvn spring-boot:run
+
+# 或后台运行
+nohup mvn spring-boot:run > /tmp/backend.log 2>&1 &
+
+# 停止服务
+ps aux | grep "spring-boot:run" | grep -v grep | awk '{print $2}' | xargs -r kill
+
+# 查看日志
+tail -f /tmp/backend.log
+
+# 端口: 9090
+# API 文档: http://localhost:9090/api/doc.html
+```
+
+### 3. 前端服务 (Vue 3 + Vite)
+```bash
+cd web
+npm run dev
+
+# 或后台运行
+nohup npm run dev > /tmp/frontend.log 2>&1 &
+
+# 停止服务
+ps aux | grep "vite" | grep web | grep -v grep | awk '{print $2}' | xargs -r kill
+
+# 端口: 8088 (如果被占用会自动使用 8089, 8090...)
+# 访问: http://localhost:8088
+```
+
+### 4. Proxy Service (FastAPI - Claude Code Skills 代理)
+```bash
+cd /home/captain/projects/EagleEye2
+source venv/bin/activate  # 激活虚拟环境
+python proxy-service/main.py
+
+# 或后台运行
+nohup ./venv/bin/python proxy-service/main.py > /tmp/proxy.log 2>&1 &
+
+# 停止服务
+ps aux | grep "proxy-service/main.py" | grep -v grep | awk '{print $2}' | xargs -r kill
+
+# 端口: 8000
+# Health: http://localhost:8000/health
+```
+
+### 5. 完整启动顺序
+```bash
+# 1. 启动 MySQL
+docker start my-mysql
+
+# 2. 启动后端
+mvn spring-boot:run &
+
+# 3. 启动前端
+cd web && npm run dev &
+
+# 4. 启动 proxy-service
+source venv/bin/activate
+python proxy-service/main.py &
+```
+
+### 6. 数据库清理命令
+```bash
+# 清空任务日志表
+docker exec -i my-mysql mysql -ucaptain -p123456 eagleeye -e "DELETE FROM crawler_task_log;"
+
+# 查询任务数量
+docker exec -i my-mysql mysql -ucaptain -p123456 eagleeye -e "SELECT COUNT(*) FROM crawler_task_log;"
+```
+
+---
+
+## 故障排查
+
+### 后端无法启动
+- 检查 MySQL 是否运行: `docker ps | grep mysql`
+- 检查端口占用: `netstat -tlnp | grep 9090`
+- 查看后端日志: `tail -100 /tmp/backend.log`
+
+### 前端无法访问后端 API
+- 检查 CORS 配置: `src/main/java/com/eagleeye/config/CorsConfig.java`
+- 确认前端代理配置: `web/vite.config.ts`
+- 检查后端是否运行: `curl http://localhost:9090/api/health`
+
+### Proxy Service 无响应
+- 检查进程: `ps aux | grep proxy-service`
+- 查看日志: `tail -100 /tmp/proxy.log`
+- 测试健康检查: `curl http://localhost:8000/health`
+
+### 爬虫任务显示失败或文章数为 0
+- 检查 proxy-service 是否运行
+- 检查 Claude Code CLI 是否可用: `claude --version`
+- 查看爬取结果目录: `ls -la crawl_files/`
+- 查看后端日志中的错误: `tail -100 /tmp/backend.log | grep -i error`

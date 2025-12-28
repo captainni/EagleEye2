@@ -6,9 +6,9 @@
       v-loading="loading"
       row-key="id"
     >
-      <el-table-column prop="id" label="任务ID" min-width="150">
+      <el-table-column prop="taskId" label="任务ID" min-width="150">
          <template #default="{ row }">
-            <span class="font-mono">{{ row.id }}</span>
+            <span class="font-mono">{{ row.taskId }}</span>
          </template>
       </el-table-column>
 
@@ -28,8 +28,23 @@
 
       <el-table-column prop="status" label="爬取状态" min-width="100">
         <template #default="{ row }">
-           <el-tag :type="row.status === 'success' ? 'success' : 'danger'" size="small">
-               {{ row.status === 'success' ? '成功' : '失败' }}
+           <el-tag
+             v-if="row.status === 'processing'"
+             type="warning"
+             size="small">
+               处理中
+           </el-tag>
+           <el-tag
+             v-else-if="row.status === 'success'"
+             type="success"
+             size="small">
+               成功
+           </el-tag>
+           <el-tag
+             v-else
+             type="danger"
+             size="small">
+               失败
            </el-tag>
         </template>
       </el-table-column>
@@ -68,7 +83,7 @@
             >
               <!-- 分析中状态：显示文字按钮 -->
               <el-button
-                v-if="isAnalyzing(row.id) || row.analysisStatus === 'analyzing'"
+                v-if="isAnalyzing(row.taskId) || row.analysisStatus === 'analyzing'"
                 disabled
                 loading
                 size="small"
@@ -144,7 +159,7 @@ const isAnalyzing = (taskId: string): boolean => {
 
 // 获取分析按钮提示
 const getAnalyzeButtonTooltip = (row: CrawlerTaskLogVO): string => {
-  if (isAnalyzing(row.id)) {
+  if (isAnalyzing(row.taskId)) {
     return '正在分析中...';
   }
   if (row.analysisStatus === 'completed') {
@@ -166,7 +181,7 @@ const getAnalyzeButtonType = (row: CrawlerTaskLogVO): string => {
 
 // 获取分析按钮图标
 const getAnalyzeButtonIcon = (row: CrawlerTaskLogVO): string => {
-  if (row.analysisStatus === 'analyzing' || isAnalyzing(row.id)) {
+  if (row.analysisStatus === 'analyzing' || isAnalyzing(row.taskId)) {
     return 'fas fa-spinner fa-spin';
   }
   if (row.analysisStatus === 'completed') {
@@ -199,7 +214,7 @@ const getAnalysisStatusText = (status: string | undefined): string => {
 
 // 处理分析按钮点击
 const handleAnalyze = (row: CrawlerTaskLogVO) => {
-  emit('analyze', row.id);
+  emit('analyze', row.taskId);
 };
 
 // 处理查看结果按钮点击

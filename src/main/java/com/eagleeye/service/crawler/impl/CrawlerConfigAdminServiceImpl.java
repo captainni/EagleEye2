@@ -326,18 +326,81 @@ public class CrawlerConfigAdminServiceImpl extends ServiceImpl<CrawlerConfigRepo
     private TriggerResult triggerEagleEyeCrawlerAsync(CrawlerConfig config) {
         log.info("异步触发 EagleEye 爬虫服务: configId={}, targetName={}", config.getConfigId(), config.getTargetName());
 
-        try {
-            // 调用异步爬虫服务，获取 CompletableFuture
-            java.util.concurrent.CompletableFuture<String> future = eagleEyeCrawlerService.triggerAsync(config.getConfigId(), 3);
+        // 【新增】处理 sourceUrls，立即创建日志记录（参考 triggerEagleEyeCrawler 方法第208-219行）
+        List<String> urls = List.of();
+        if (StringUtils.hasText(config.getSourceUrls())) {
+            urls = Arrays.stream(config.getSourceUrls().split("\\r?\\n"))
+                    .map(String::trim)
+                    .filter(StringUtils::hasText)
+                    .collect(Collectors.toList());
+        }
 
-            // 立即获取 taskId（CompletableFuture 已完成，包含 taskId）
-            String taskId = future.get();
+        if (urls.isEmpty()) {
+            log.warn("Cannot trigger EagleEye crawler: configId={}, sourceUrls is empty.", config.getConfigId());
+            return new TriggerResult(false, null, "配置的 sourceUrls 为空");
+        }
+
+        String listUrl = urls.get(0);
+        String taskId = UUID.randomUUID().toString(true);
+
+        // 【新增】立即创建任务日志
+        CrawlerTaskLog taskLog = new CrawlerTaskLog();
+        taskLog.setTaskId(taskId);
+        taskLog.setConfigId(config.getConfigId());
+        taskLog.setTargetUrl(listUrl);
+        taskLog.setStartTime(LocalDateTime.now());
+        taskLog.setStatus("processing");
+
+        boolean logSaved = crawlerTaskLogService.saveTaskLog(taskLog);
+        if (!logSaved) {
+            log.warn("Failed to save initial task log for configId={}", config.getConfigId());
+        }
+
+        try {
+            // 【修改】调用新的异步方法，传递 taskId
+            java.util.concurrent.CompletableFuture<EagleEyeCrawlerService.CrawlResult> future =
+                eagleEyeCrawlerService.triggerAsyncWithResult(config.getConfigId(), taskId, 3);
+
+            // 【新增】异步完成后更新日志
+            final Long taskLogId = taskLog.getLogId();
+            final Long configId = config.getConfigId();
+            future.thenAccept(result -> {
+                CrawlerTaskLog updateLog = new CrawlerTaskLog();
+                updateLog.setLogId(taskLogId);
+                updateLog.setEndTime(LocalDateTime.now());
+
+                if (result.getSuccess()) {
+                    updateLog.setStatus("success");
+                    updateLog.setBatchPath(result.getBatchPath());
+                    updateLog.setArticleCount(result.getArticleCount());
+                    updateLog.setCategoryStats(result.getCategoryStats());
+
+                    // 更新配置的 result_path
+                    CrawlerConfig configToUpdate = CrawlerConfigAdminServiceImpl.this.getOne(
+                            Wrappers.lambdaQuery(CrawlerConfig.class)
+                                    .eq(CrawlerConfig::getConfigId, configId)
+                    );
+                    if (configToUpdate != null) {
+                        configToUpdate.setResultPath(result.getBatchPath());
+                        configToUpdate.setUpdateTime(LocalDateTime.now());
+                        CrawlerConfigAdminServiceImpl.this.updateById(configToUpdate);
+                    }
+                } else {
+                    updateLog.setStatus("failure");
+                    updateLog.setErrorMessage(result.getErrorMessage());
+                }
+                crawlerTaskLogService.updateTaskLog(updateLog);
+            });
 
             log.info("EagleEye 爬虫任务已提交: configId={}, taskId={}", config.getConfigId(), taskId);
             return new TriggerResult(true, taskId, "任务已提交，正在后台执行");
 
         } catch (Exception e) {
             log.error("EagleEye 爬虫服务调用失败: configId={}", config.getConfigId(), e);
+            taskLog.setEndTime(LocalDateTime.now());
+            taskLog.setStatus("failure");
+            taskLog.setErrorMessage("服务调用失败: " + e.getMessage());
+            crawlerTaskLogService.updateTaskLog(taskLog);
             return new TriggerResult(false, null, "服务调用失败: " + e.getMessage());
         }
     }

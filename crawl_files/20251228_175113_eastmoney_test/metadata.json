@@ -1,0 +1,30 @@
+{
+  "batchId": "20251228_175113_eastmoney_test",
+  "source": "东方财富网",
+  "sourceUrl": "https://bank.eastmoney.com/a/czzyh.html",
+  "sourceName": "eastmoney_test",
+  "crawlTime": "2025-12-28T17:51:13",
+  "articleCount": 2,
+  "articles": [
+    {
+      "index": 1,
+      "title": "央行：显著提高中长期资金投资A股的规模和比例！",
+      "filename": "01_政策_央行显著提高中长期资金投资A股规模比例.md",
+      "url": "https://finance.sina.com.cn/roll/2025-12-27/doc-inheerhz0280811.shtml",
+      "category": "policy",
+      "publishTime": "2025-12-27T07:50:48",
+      "author": "东财财经头条",
+      "tags": ["银行", "报告", "央行", "A股"]
+    },
+    {
+      "index": 2,
+      "title": "2025年银行业'破壁'进化：大象起舞 向新而生",
+      "filename": "02_竞品_2025年银行业破壁进化大象起舞向新而生.md",
+      "url": "https://wap.eastmoney.com/a/202512253601070047.html",
+      "category": "competitor",
+      "publishTime": "2025-12-25T00:00:00",
+      "author": "证券日报",
+      "tags": ["银行业", "转型", "AI", "金融科技"]
+    }
+  ]
+}

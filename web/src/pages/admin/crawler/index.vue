@@ -9,14 +9,12 @@
       <el-tabs v-model="activeTab" class="admin-crawler-tabs" @tab-click="handleTabClick">
         <el-tab-pane label="配置管理" name="config"></el-tab-pane>
         <el-tab-pane label="任务监控" name="monitor"></el-tab-pane>
-        <el-tab-pane label="用户建议" name="suggestions"></el-tab-pane>
       </el-tabs>
 
       <!-- Tab Content -->
       <div class="mt-6">
-        <ConfigManagementTab v-if="activeTab === 'config'" ref="configManagementTabRef" />
+        <ConfigManagementTab v-if="activeTab === 'config'" />
         <TaskMonitoringTab v-if="activeTab === 'monitor'" />
-        <UserSuggestionsTab v-if="activeTab === 'suggestions'" @show-config-modal="handleShowConfigModal" />
       </div>
 
     </div>
@@ -24,15 +22,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from 'vue';
+import { ref } from 'vue';
 import type { TabsPaneContext } from 'element-plus';
 import ConfigManagementTab from './ConfigManagementTab.vue';
 import TaskMonitoringTab from './TaskMonitoringTab.vue';
-import UserSuggestionsTab from './UserSuggestionsTab.vue';
 import NavBar from '@/components/common/NavBar.vue';
 
 const activeTab = ref('config');
-const configManagementTabRef = ref<InstanceType<typeof ConfigManagementTab> | null>(null);
 
 const activeMenu = '/admin/crawler';
 const mockUser = ref({
@@ -44,24 +40,6 @@ const mockUser = ref({
 const handleTabClick = (tab: TabsPaneContext) => {
   // console.log('Tab clicked:', tab.paneName);
   // Optional: Add logic if needed when tab changes, like pre-fetching data
-};
-
-// 处理从用户建议标签页传来的打开配置模态框的事件
-const handleShowConfigModal = (configData: any) => {
-  console.log('Parent received show-config-modal event with data:', configData);
-  
-  // 切换到配置管理标签页
-  activeTab.value = 'config';
-  
-  // 使用nextTick确保标签页已切换，DOM已更新
-  nextTick(() => {
-    if (configManagementTabRef.value) {
-      console.log('Calling openAddModalWithData on ConfigManagementTab');
-      configManagementTabRef.value.openAddModalWithData(configData);
-    } else {
-      console.error('ConfigManagementTab reference not found');
-    }
-  });
 };
 </script>
 

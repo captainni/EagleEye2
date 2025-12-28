@@ -38,6 +38,10 @@ server:
   servlet:
     context-path: /api
 
+# 爬虫文件存储配置
+crawl-files:
+  base-path: /home/captain/projects/EagleEye2/
+
 mybatis-plus:
   mapper-locations: classpath:mapper/**/*.xml
   type-aliases-package: com.eagleeye.model.entity

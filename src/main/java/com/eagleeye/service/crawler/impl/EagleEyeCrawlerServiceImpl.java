@@ -115,7 +115,7 @@ public class EagleEyeCrawlerServiceImpl implements EagleEyeCrawlerService {
 
     /**
      * 从 Claude Code 的 result 字段中提取爬取信息
-     * result 格式示例: "爬虫任务执行完成！...批次路径: crawl_files/20251228_100307_eastmoney_bank/..."
+     * 优先从 metadata.json 读取文章数量，否则从字符串解析
      */
     private CrawlResult extractFromResult(String result) {
         try {
@@ -131,30 +131,116 @@ public class EagleEyeCrawlerServiceImpl implements EagleEyeCrawlerService {
                 }
             }
 
-            // 提取文章数量 (查找 "成功爬取 X 篇文章")
+            // 优先从 metadata.json 读取文章数量
             Integer articleCount = 0;
-            int successIndex = result.indexOf("成功爬取");
-            if (successIndex != -1) {
-                int numStart = result.indexOf(" ", successIndex + 5);
-                if (numStart != -1) {
-                    int numEnd = result.indexOf(" ", numStart + 1);
-                    if (numEnd != -1) {
-                        String numStr = result.substring(numStart + 1, numEnd);
-                        try {
-                            articleCount = Integer.parseInt(numStr);
-                        } catch (NumberFormatException ignored) {}
+            String categoryStats = null;
+
+            if (batchPath != null) {
+                try {
+                    java.nio.file.Path metadataPath = java.nio.file.Paths.get("/home/captain/projects/EagleEye2", batchPath, "metadata.json");
+                    if (java.nio.file.Files.exists(metadataPath)) {
+                        String metadataContent = new String(java.nio.file.Files.readAllBytes(metadataPath));
+                        JsonNode metadataJson = objectMapper.readTree(metadataContent);
+                        if (metadataJson.has("articleCount")) {
+                            articleCount = metadataJson.get("articleCount").asInt();
+                            logger.info("从 metadata.json 读取到文章数量: {}", articleCount);
+                        }
+                        // 提取分类统计
+                        if (metadataJson.has("articles")) {
+                            JsonNode articles = metadataJson.get("articles");
+                            int policyCount = 0;
+                            int competitorCount = 0;
+                            for (JsonNode article : articles) {
+                                String category = article.has("category") ? article.get("category").asText() : "";
+                                if ("policy".equals(category)) policyCount++;
+                                else if ("competitor".equals(category)) competitorCount++;
+                            }
+                            categoryStats = String.format("政策:%d,竞品:%d", policyCount, competitorCount);
+                            logger.info("分类统计: policyCount={}, competitorCount={}, categoryStats={}", policyCount, competitorCount, categoryStats);
+                        }
                     }
+                } catch (Exception e) {
+                    logger.warn("从 metadata.json 读取失败，尝试字符串解析: {}", e.getMessage());
                 }
             }
 
-            // 提取分类统计 (简化处理，可以后续增强)
-            String categoryStats = null;
+            // 如果从文件读取失败，尝试从字符串解析 (兼容旧格式)
+            if (articleCount == 0) {
+                int successIndex = result.indexOf("成功爬取");
+                if (successIndex != -1) {
+                    int numStart = result.indexOf(" ", successIndex + 5);
+                    if (numStart != -1) {
+                        int numEnd = result.indexOf(" ", numStart + 1);
+                        if (numEnd != -1) {
+                            String numStr = result.substring(numStart + 1, numEnd);
+                            try {
+                                articleCount = Integer.parseInt(numStr);
+                            } catch (NumberFormatException ignored) {}
+                        }
+                    }
+                }
+            }
 
             return new CrawlResult(true, batchPath, articleCount, categoryStats, null);
 
         } catch (Exception e) {
             logger.error("提取结果信息失败", e);
             return new CrawlResult(true, null, 0, null, null); // 即使解析失败也返回成功
+        }
+    }
+
+    /**
+     * 从 URL 提取 sourceName
+     * 例如: https://bank.eastmoney.com/a/czzyh.html -> eastmoney_czzyh
+     * 例如: https://finance.eastmoney.com/a/20251226.html -> eastmoney_finance
+     */
+    private String extractSourceNameFromUrl(String url) {
+        try {
+            // 移除协议前缀
+            String cleanUrl = url.replaceFirst("^https?://", "");
+
+            // 提取域名和路径
+            String[] parts = cleanUrl.split("/", 3);
+            if (parts.length < 2) {
+                return "unknown";
+            }
+
+            String domain = parts[0]; // bank.eastmoney.com
+            String path = parts.length > 1 ? parts[1] : ""; // /a or empty
+
+            // 从域名提取主域名 (例如: bank.eastmoney.com -> eastmoney)
+            String[] domainParts = domain.split("\\.");
+            String mainDomain = domainParts.length >= 2 ? domainParts[domainParts.length - 2] : domainParts[0];
+
+            // 从路径提取标识符 (例如: /a/czzyh.html -> czzyh)
+            String pathId = "";
+            if (!path.isEmpty()) {
+                // 获取路径的最后一部分，移除 .html 等扩展名
+                String[] pathParts = path.split("/");
+                for (String part : pathParts) {
+                    if (!part.isEmpty() && !part.matches("^\\d+$")) { // 跳过纯数字部分
+                        pathId = part.replaceAll("\\.[^.]+$", ""); // 移除扩展名
+                        if (pathId.length() > 2) { // 至少3个字符才使用
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // 如果没有有效的路径 ID，尝试使用域名的第一部分作为标识
+            if (pathId.isEmpty() || pathId.length() <= 2) {
+                if (domainParts.length > 2) {
+                    pathId = domainParts[0]; // 使用子域名 (例如: bank)
+                } else {
+                    pathId = "news"; // 默认标识
+                }
+            }
+
+            return mainDomain + "_" + pathId;
+
+        } catch (Exception e) {
+            logger.warn("从 URL 提取 sourceName 失败: {}, 使用默认值", url, e);
+            return "unknown_source";
         }
     }
 
@@ -184,7 +270,9 @@ public class EagleEyeCrawlerServiceImpl implements EagleEyeCrawlerService {
             return CompletableFuture.failedFuture(new RuntimeException("配置的 sourceUrls 为空: configId=" + configId));
         }
 
-        String sourceName = config.getTargetName().replaceAll("[^a-zA-Z0-9_]", "_").toLowerCase();
+        // 从 URL 提取 sourceName (例如: https://bank.eastmoney.com/a/czzyh.html -> eastmoney_czzyh)
+        String sourceName = extractSourceNameFromUrl(listUrl);
+        logger.info("从 URL 提取 sourceName: {} -> {}", listUrl, sourceName);
 
         // 生成任务ID
         String taskId = UUID.randomUUID().toString(true);
@@ -256,5 +344,42 @@ public class EagleEyeCrawlerServiceImpl implements EagleEyeCrawlerService {
 
         // 立即返回任务ID
         return CompletableFuture.completedFuture(taskId);
+    }
+
+    @Override
+    @Async
+    public CompletableFuture<CrawlResult> triggerAsyncWithResult(Long configId, String taskId, Integer maxArticles) {
+        logger.info("异步触发 EagleEye 爬虫服务（含taskId）: configId={}, taskId={}, maxArticles={}", configId, taskId, maxArticles);
+
+        // 查询配置
+        CrawlerConfig config = crawlerConfigRepository.selectById(configId);
+        if (config == null) {
+            logger.error("配置不存在: configId={}", configId);
+            return CompletableFuture.completedFuture(new CrawlResult(false, null, 0, null, "配置不存在"));
+        }
+
+        // 处理 sourceUrls
+        String listUrl = null;
+        if (config.getSourceUrls() != null && !config.getSourceUrls().isEmpty()) {
+            String[] urls = config.getSourceUrls().split("\\r?\\n");
+            if (urls.length > 0) {
+                listUrl = urls[0].trim();
+            }
+        }
+
+        if (listUrl == null || listUrl.isEmpty()) {
+            return CompletableFuture.completedFuture(new CrawlResult(false, null, 0, null, "配置的 sourceUrls 为空"));
+        }
+
+        // 从 URL 提取 sourceName
+        String sourceName = extractSourceNameFromUrl(listUrl);
+
+        // 异步执行爬虫并返回结果
+        final String finalSourceName = sourceName;
+        final String finalListUrl = listUrl;
+        final Integer finalMaxArticles = maxArticles;
+        return CompletableFuture.supplyAsync(() -> {
+            return crawl(finalSourceName, finalListUrl, finalMaxArticles);
+        });
     }
 }

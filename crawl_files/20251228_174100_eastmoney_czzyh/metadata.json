@@ -1,0 +1,40 @@
+{
+  "batchId": "20251228_174100_eastmoney_czzyh",
+  "source": "东方财富网",
+  "sourceUrl": "https://bank.eastmoney.com/a/czzyh.html",
+  "sourceName": "eastmoney_czzyh",
+  "crawlTime": "2025-12-28T17:41:00",
+  "articleCount": 3,
+  "articles": [
+    {
+      "index": 1,
+      "title": "人民币跨境支付系统将'升级'！央行发布的新规明年2月起执行",
+      "filename": "01_政策_人民币跨境支付系统将升级.md",
+      "url": "https://wap.eastmoney.com/a/202512273603314423.html",
+      "category": "policy",
+      "publishTime": "2025-12-26T00:00:00",
+      "author": "每日经济新闻",
+      "tags": ["央行", "CIPS", "跨境支付", "人民币国际化"]
+    },
+    {
+      "index": 2,
+      "title": "年末银行股现折价大宗交易 兴业银行、民生银行一日成交合计超13亿 什么信号？",
+      "filename": "02_竞品_年末银行股现折价大宗交易兴业银行民生银行一日成交合计超13亿什么信号.md",
+      "url": "https://finance.eastmoney.com/a/202512203597478162.html",
+      "category": "competitor",
+      "publishTime": "2025-12-20T00:00:00",
+      "author": "界面新闻",
+      "tags": ["银行股", "大宗交易", "兴业银行", "民生银行", "折价成交"]
+    },
+    {
+      "index": 3,
+      "title": "央行明日开展4000亿元MLF操作 连续10个月加量续做",
+      "filename": "03_政策_央行明日开展4000亿元MLF操作连续10个月加量续做.md",
+      "url": "https://finance.eastmoney.com/a/202512243600800836.html",
+      "category": "policy",
+      "publishTime": "2025-12-24T00:00:00",
+      "author": "澎湃新闻",
+      "tags": ["央行", "MLF操作", "流动性", "货币政策"]
+    }
+  ]
+}

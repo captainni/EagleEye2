@@ -16,7 +16,7 @@ public class CorsConfig {
                 // 允许所有路径进行跨域请求
                 registry.addMapping("/**")
                         // 允许来自前端开发服务器的请求 (支持多个端口)
-                        .allowedOrigins("http://localhost:8088", "http://localhost:8089")
+                        .allowedOrigins("http://localhost:8088", "http://localhost:8089", "http://localhost:8090")
                         // 允许所有请求方法 (GET, POST, PUT, DELETE, etc.)
                         .allowedMethods("*")
                         // 允许所有请求头

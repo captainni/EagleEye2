@@ -32,7 +32,69 @@ description: EagleEye2 智能爬虫工具，用于爬取金融资讯网站文章
    - 提取结构化内容（标题、作者、发布时间、正文、标签、分类）
    - 生成 Markdown 文件（文件名含分类标识）
    - 保存到批次文件夹
-5. **生成汇总**：创建 summary.md 和 metadata.json（含各文章的分类）
+5. **生成汇总**：创建 summary.md
+6. **保存元数据**：生成 metadata.json 文件
+
+## metadata.json 格式要求
+
+**CRITICAL - JSON 格式规则**
+
+生成 metadata.json 时必须严格遵守以下规则，否则后端无法解析：
+
+### 规则 1：字符串值中的引号处理
+
+**错误示例**（会导致 JSON 解析失败）：
+```json
+{
+  "title": "银行"开门红"揽储手段利器"  // ❌ 字符串内包含未转义的双引号
+}
+```
+
+**正确示例**（将内部双引号替换单引号）：
+```json
+{
+  "title": "银行'开门红'揽储手段利器"  // ✅ 使用单引号
+}
+```
+
+### 规则 2：完整的 metadata.json 模板
+
+```json
+{
+  "batchId": "20251228_163000_eastmoney_czzyh",
+  "source": "来源网站名称",
+  "sourceUrl": "https://example.com/list",
+  "sourceName": "eastmoney_czzyh",
+  "crawlTime": "2025-12-28T16:30:00",
+  "articleCount": 3,
+  "articles": [
+    {
+      "index": 1,
+      "title": "文章标题（引号用单引号）",
+      "filename": "01_政策_文章标题.md",
+      "url": "https://example.com/article1",
+      "category": "policy",
+      "publishTime": "2025-12-28T10:00:00",
+      "author": "作者名",
+      "tags": ["标签1", "标签2"]
+    }
+  ]
+}
+```
+
+### 规则 3：生成步骤
+
+1. 先在内存中构建完整的 JSON 对象
+2. **检查所有 title 字段**，将双引号替换单引号
+3. 使用 `Write` 工具写入文件，确保 JSON 格式正确
+4. 验证：尝试用 `python3 -m json.tool metadata.json` 验证格式
+
+**示例**：
+```python
+# 正确的处理方式
+title = '银行"开门红"揽储'  # 原始标题
+clean_title = title.replace('"', "'")  # 清理后: 银行'开门红'揽储'
+```
 
 ## 输出结构
 
@@ -110,3 +172,4 @@ crawl_files/
 2. 单次最多爬取 20 篇文章
 3. 文件名自动清理非法字符，标题限制 50 字符
 4. 批次文件夹包含时间戳，避免覆盖
+5. **CRITICAL**：生成 metadata.json 时，必须将标题中的双引号替换单引号，否则会导致后端 JSON 解析失败

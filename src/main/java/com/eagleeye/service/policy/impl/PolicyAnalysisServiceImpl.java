@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +46,9 @@ public class PolicyAnalysisServiceImpl implements PolicyAnalysisService {
 
     private static final Logger log = LoggerFactory.getLogger(PolicyAnalysisServiceImpl.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Value("${crawl-files.base-path}")
+    private String crawlFilesBasePath;
 
     private final PolicyAnalyzer policyAnalyzer;
     private final CrawlerTaskLogRepository taskLogRepository;
@@ -97,6 +101,12 @@ public class PolicyAnalysisServiceImpl implements PolicyAnalysisService {
             throw new RuntimeException("批次路径为空: " + taskLogId);
         }
 
+        // 如果是相对路径，转换为绝对路径
+        if (!batchPath.startsWith("/")) {
+            batchPath = crawlFilesBasePath + batchPath;
+        }
+        log.info("使用批次路径: {}", batchPath);
+
         // 2. 更新任务状态为分析中
         updateTaskLogStatus(taskLogId, "analyzing", null);
 
@@ -147,7 +157,11 @@ public class PolicyAnalysisServiceImpl implements PolicyAnalysisService {
             return policyPaths;
         }
 
-        JsonNode rootNode = objectMapper.readTree(metadataFile);
+        // 读取文件内容并清理可能的格式问题
+        String metadataContent = Files.readString(metadataFile.toPath());
+        metadataContent = cleanJsonContent(metadataContent);
+
+        JsonNode rootNode = objectMapper.readTree(metadataContent);
         JsonNode articlesNode = rootNode.get("articles");
 
         if (articlesNode == null || !articlesNode.isArray()) {
@@ -159,9 +173,11 @@ public class PolicyAnalysisServiceImpl implements PolicyAnalysisService {
         for (JsonNode articleNode : articlesNode) {
             JsonNode categoryNode = articleNode.get("category");
             if (categoryNode != null && "policy".equals(categoryNode.asText())) {
-                JsonNode markdownPathNode = articleNode.get("markdownPath");
-                if (markdownPathNode != null) {
-                    policyPaths.add(markdownPathNode.asText());
+                JsonNode fileNode = articleNode.get("file");
+                if (fileNode != null) {
+                    // 拼接完整路径
+                    String fullPath = batchPath + fileNode.asText();
+                    policyPaths.add(fullPath);
                 }
             }
         }
@@ -383,5 +399,20 @@ public class PolicyAnalysisServiceImpl implements PolicyAnalysisService {
         }
 
         taskLogRepository.updateById(taskLog);
+    }
+
+    /**
+     * 清理 JSON 内容中的格式问题
+     * 主要处理未转义的引号等字符
+     */
+    private String cleanJsonContent(String jsonContent) {
+        if (jsonContent == null) return null;
+
+        // 替换字符串值内部的未转义双引号为单引号
+        // 例如："title": "银行"开门红"揽储" -> "title": "银行'开门红'揽储"
+        // 这个正则匹配 JSON 字符串值中出现的未转义引号
+        String cleaned = jsonContent.replaceAll(": \"([^\"]{0,50})\"([^\"]{0,50})\"([^\"]{0,50})\"", ": \"$1'$2'$3\"");
+
+        return cleaned;
     }
 }

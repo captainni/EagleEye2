@@ -26,6 +26,15 @@ public interface EagleEyeCrawlerService {
     CompletableFuture<String> triggerAsync(Long configId, Integer maxArticles);
 
     /**
+     * 异步触发爬虫任务（返回结果，用于主线程已创建日志的场景）
+     * @param configId 配置ID
+     * @param taskId 预先生成的任务ID
+     * @param maxArticles 最大文章数
+     * @return 爬取结果的CompletableFuture
+     */
+    CompletableFuture<CrawlResult> triggerAsyncWithResult(Long configId, String taskId, Integer maxArticles);
+
+    /**
      * 爬取结果
      */
     class CrawlResult {
