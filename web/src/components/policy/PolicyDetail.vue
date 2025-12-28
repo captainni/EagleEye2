@@ -16,7 +16,7 @@
         </span>
         <!-- 显示相关度（新增） -->
         <span
-          v-if="policy.relevance"
+          v-if="policy.relevance && policy.relevance !== 'undefined'"
           class="px-2 py-0.5 text-xs font-medium rounded-full"
           :class="relevanceClass"
         >
@@ -97,6 +97,14 @@
 <script lang="ts" setup>
 import { defineProps, computed } from 'vue';
 import { PolicyVO, SuggestionVO } from '@/api/policy'; // 导入统一的 PolicyVO 和 SuggestionVO
+import MarkdownIt from 'markdown-it';
+
+// 创建 markdown-it 实例
+const md = new MarkdownIt({
+  html: true,        // 允许 HTML 标签
+  linkify: true,     // 自动转换 URL 为链接
+  typographer: true  // 启用一些语言中立的替换和引号美化
+});
 
 const props = defineProps<{
   policy: PolicyVO;
@@ -106,10 +114,13 @@ const props = defineProps<{
 const importanceLabel = computed(() => {
   const importance = props.policy.importance;
   if (!importance) return '未知';
+  let value: string;
   if (typeof importance === 'object' && importance !== null) {
-    return String((importance as { label?: string }).label || importance);
-  } 
-  return String(importance);
+    value = String((importance as { label?: string }).label || importance);
+  } else {
+    value = String(importance);
+  }
+  return `重要性: ${value}`;
 });
 
 // 重要性样式计算 - 兼容字符串和对象
@@ -165,7 +176,7 @@ const relevanceClass = computed(() => {
   }
 });
 
-// 新增：计算高亮后的原文内容
+// 新增：计算高亮后的原文内容（支持 Markdown 渲染）
 const highlightedContent = computed(() => {
   console.log('计算 highlightedContent...');
   console.log('原始 content:', props.policy.content);
@@ -175,10 +186,12 @@ const highlightedContent = computed(() => {
   const originalContent = props.policy.content || '';
   const keyPoints = props.policy.keyPoints;
 
-  // 检查 keyPoints 是否是有效数组且有内容
-  if (Array.isArray(keyPoints) && keyPoints.length > 0 && originalContent) {
-    let processedContent = originalContent; // 从原始内容开始处理
-    // 对每个关键点进行处理
+  // 1. 先将 Markdown 转换为 HTML
+  let htmlContent = md.render(originalContent);
+
+  // 2. 检查 keyPoints 是否是有效数组且有内容
+  if (Array.isArray(keyPoints) && keyPoints.length > 0 && htmlContent) {
+    // 对每个关键点进行高亮处理
     keyPoints.forEach(point => {
       if (point) { // 确保关键点不是空字符串
         // 转义正则表达式特殊字符
@@ -186,15 +199,13 @@ const highlightedContent = computed(() => {
         // 创建正则表达式，进行全局、不区分大小写替换
         const regex = new RegExp(escapedPoint, 'gi');
         // 使用 <mark> 标签包裹匹配到的文本
-        processedContent = processedContent.replace(regex, (match) => `<mark>${match}</mark>`);
+        htmlContent = htmlContent.replace(regex, (match) => `<mark>${match}</mark>`);
       }
     });
-    console.log('高亮处理后的 content:', processedContent);
-    return processedContent; // 返回处理后的内容
-  } else {
-    console.log('keyPoints 不可用或为空，返回原始 content');
-    return originalContent; // 如果 keyPoints 无效或为空，返回原始内容
   }
+
+  console.log('最终 HTML 内容:', htmlContent);
+  return htmlContent;
 });
 
 const convertToRequirement = () => {

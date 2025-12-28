@@ -10,7 +10,11 @@ import subprocess
 import json
 import os
 import signal
+import logging
+import time
+from datetime import datetime
 from typing import Optional
+from pathlib import Path
 
 app = FastAPI(title="EagleEye2 Proxy", version="1.0.0")
 
@@ -19,6 +23,26 @@ MCP_HTTP_URL = os.getenv("MCP_HTTP_URL", "http://localhost:3000/mcp")
 CRAWL_OUTPUT_DIR = os.getenv("CRAWL_OUTPUT_DIR", "/home/captain/projects/EagleEye2/crawl_files")
 CRAWL_TIMEOUT = int(os.getenv("CRAWL_TIMEOUT", "300"))  # 默认5分钟超时
 ANALYSIS_TIMEOUT = int(os.getenv("ANALYSIS_TIMEOUT", "300"))  # 默认5分钟超时
+
+# 日志目录
+LOG_DIR = Path("/home/captain/projects/EagleEye2/logs")
+LOG_DIR.mkdir(exist_ok=True)
+
+# 配置 Proxy Service 日志
+proxy_logger = logging.getLogger("proxy")
+proxy_logger.setLevel(logging.INFO)
+proxy_handler = logging.FileHandler(LOG_DIR / "proxy.log", encoding="utf-8")
+proxy_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+proxy_logger.addHandler(proxy_handler)
+
+# 配置 Claude CLI 日志
+claude_logger = logging.getLogger("claude-cli")
+claude_logger.setLevel(logging.INFO)
+claude_handler = logging.FileHandler(LOG_DIR / "claude-cli.log", encoding="utf-8")
+claude_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+claude_logger.addHandler(claude_handler)
+
+proxy_logger.info("Proxy Service 启动")
 
 
 class CrawlRequest(BaseModel):
@@ -61,6 +85,10 @@ async def analyze_policy(req: Request):
     """
     调用 policy-analyzer skill 分析政策文章
     """
+    claude_logger.info("=" * 50)
+    claude_logger.info("开始政策分析任务")
+    proxy_logger.info("收到政策分析请求")
+
     try:
         data = await req.json()
         content = data.get("content")
@@ -68,6 +96,9 @@ async def analyze_policy(req: Request):
 
         if not content:
             raise HTTPException(status_code=400, detail="Missing required field: content")
+
+        claude_logger.info(f"内容长度: {len(content)} 字符")
+        claude_logger.info(f"有产品信息: {'是' if products else '否'}")
 
         # 构建产品上下文（如果有）
         products_context = ""
@@ -98,6 +129,7 @@ async def analyze_policy(req: Request):
 """
 
         proc = None
+        start_time = time.time()
         try:
             # 调用 Claude Code CLI
             proc = await asyncio.create_subprocess_exec(
@@ -109,6 +141,9 @@ async def analyze_policy(req: Request):
                 cwd="/home/captain/projects/EagleEye2"
             )
 
+            pid = proc.pid
+            claude_logger.info(f"启动 Claude Code CLI, PID={pid}")
+
             # 等待进程完成，带超时控制
             try:
                 stdout, stderr = await asyncio.wait_for(
@@ -116,6 +151,8 @@ async def analyze_policy(req: Request):
                     timeout=ANALYSIS_TIMEOUT
                 )
             except asyncio.TimeoutError:
+                elapsed = time.time() - start_time
+                claude_logger.error(f"超时终止: PID={pid}, 已耗时={elapsed:.1f}s, 超时限制={ANALYSIS_TIMEOUT}s")
                 if proc:
                     try:
                         proc.kill()
@@ -128,15 +165,23 @@ async def analyze_policy(req: Request):
                 )
 
             # 检查返回码
+            elapsed = time.time() - start_time
             if proc.returncode != 0:
                 error_msg = stderr.decode() if stderr else "Unknown error"
+                claude_logger.error(f"Claude Code CLI 执行失败: PID={pid}, 退出码={proc.returncode}, 耗时={elapsed:.1f}s")
+                claude_logger.error(f"错误信息: {error_msg}")
                 raise HTTPException(
                     status_code=500,
                     detail=f"Claude CLI error (exit code {proc.returncode}): {error_msg}"
                 )
 
+            claude_logger.info(f"Claude Code CLI 执行成功: PID={pid}, 退出码=0, 耗时={elapsed:.1f}s")
+
             # 尝试解析返回结果为 JSON
             result_text = stdout.decode().strip()
+            claude_logger.info(f"输出长度: {len(result_text)} 字符")
+            claude_logger.info("=" * 50)
+
             try:
                 # 尝试直接解析
                 result = json.loads(result_text)
@@ -157,6 +202,9 @@ async def analyze_policy(req: Request):
         except HTTPException:
             raise
         except Exception as e:
+            elapsed = time.time() - start_time
+            claude_logger.error(f"任务异常: {str(e)}, 耗时={elapsed:.1f}s")
+            claude_logger.info("=" * 50)
             raise HTTPException(status_code=500, detail=str(e))
 
         finally:
@@ -169,6 +217,8 @@ async def analyze_policy(req: Request):
                     pass
 
     except Exception as e:
+        claude_logger.error(f"分析失败: {str(e)}")
+        claude_logger.info("=" * 50)
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
@@ -177,7 +227,13 @@ async def _crawl_with_skill(req: CrawlRequest):
     """使用 Claude Code CLI + Skill（使用 asyncio 正确管理进程）"""
     prompt = f"使用 eagleeye-crawler skill 爬取 {req.listUrl} 的最新{req.maxArticles}篇文章，来源标识为 {req.sourceName}"
 
+    claude_logger.info("=" * 50)
+    claude_logger.info("开始爬虫任务")
+    claude_logger.info(f"参数: listUrl={req.listUrl}, sourceName={req.sourceName}, maxArticles={req.maxArticles}")
+    proxy_logger.info(f"收到爬虫请求: {req.sourceName}, {req.maxArticles}篇文章")
+
     proc = None
+    start_time = time.time()
     try:
         # 使用 asyncio.create_subprocess_exec 替代 subprocess.run
         proc = await asyncio.create_subprocess_exec(
@@ -190,6 +246,9 @@ async def _crawl_with_skill(req: CrawlRequest):
             cwd="/home/captain/projects/EagleEye2"
         )
 
+        pid = proc.pid
+        claude_logger.info(f"启动 Claude Code CLI, PID={pid}")
+
         # 等待进程完成，带超时控制
         try:
             stdout, stderr = await asyncio.wait_for(
@@ -198,6 +257,8 @@ async def _crawl_with_skill(req: CrawlRequest):
             )
         except asyncio.TimeoutError:
             # 超时：强制终止进程
+            elapsed = time.time() - start_time
+            claude_logger.error(f"超时终止: PID={pid}, 已耗时={elapsed:.1f}s, 超时限制={CRAWL_TIMEOUT}s")
             if proc:
                 try:
                     proc.kill()
@@ -210,22 +271,33 @@ async def _crawl_with_skill(req: CrawlRequest):
             )
 
         # 检查返回码
+        elapsed = time.time() - start_time
         if proc.returncode != 0:
             error_msg = stderr.decode() if stderr else "Unknown error"
+            claude_logger.error(f"Claude Code CLI 执行失败: PID={pid}, 退出码={proc.returncode}, 耗时={elapsed:.1f}s")
+            claude_logger.error(f"错误信息: {error_msg}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Claude CLI error (exit code {proc.returncode}): {error_msg}"
             )
 
+        claude_logger.info(f"Claude Code CLI 执行成功: PID={pid}, 退出码=0, 耗时={elapsed:.1f}s")
+        stdout_text = stdout.decode() if stdout else ""
+        claude_logger.info(f"输出长度: {len(stdout_text)} 字符")
+        claude_logger.info("=" * 50)
+
         return {
             "success": True,
             "method": "skill",
-            "data": stdout.decode() if stdout else ""
+            "data": stdout_text
         }
 
     except HTTPException:
         raise
     except Exception as e:
+        elapsed = time.time() - start_time
+        claude_logger.error(f"任务异常: {str(e)}, 耗时={elapsed:.1f}s")
+        claude_logger.info("=" * 50)
         raise HTTPException(status_code=500, detail=str(e))
 
     finally:

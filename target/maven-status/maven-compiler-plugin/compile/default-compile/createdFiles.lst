@@ -33,6 +33,7 @@ com/eagleeye/service/policy/PolicyAnalyzer.class
 com/eagleeye/model/dto/PushSettingsDTO.class
 com/eagleeye/repository/PolicyRepository.class
 com/eagleeye/model/vo/dashboard/DashboardStatsVO$RequirementStatVO.class
+com/eagleeye/service/policy/impl/PolicyAnalysisServiceImpl$ArticleInfo.class
 com/eagleeye/model/vo/dashboard/DashboardStatsVO$TrendStatVO.class
 com/eagleeye/model/vo/PolicyVO.class
 com/eagleeye/service/crawler/impl/CrawlerResultConsumer.class

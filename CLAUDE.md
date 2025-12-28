@@ -173,13 +173,13 @@ docker ps | grep mysql
 mvn spring-boot:run
 
 # 或后台运行
-nohup mvn spring-boot:run > /tmp/backend.log 2>&1 &
+nohup mvn spring-boot:run > logs/backend.log 2>&1 &
 
 # 停止服务
 ps aux | grep "spring-boot:run" | grep -v grep | awk '{print $2}' | xargs -r kill
 
 # 查看日志
-tail -f /tmp/backend.log
+tail -f logs/backend.log
 
 # 端口: 9090
 # API 文档: http://localhost:9090/api/doc.html
@@ -191,7 +191,7 @@ cd web
 npm run dev
 
 # 或后台运行
-nohup npm run dev > /tmp/frontend.log 2>&1 &
+nohup npm run dev > ../logs/frontend.log 2>&1 &
 
 # 停止服务
 ps aux | grep "vite" | grep web | grep -v grep | awk '{print $2}' | xargs -r kill
@@ -207,16 +207,43 @@ source venv/bin/activate  # 激活虚拟环境
 python proxy-service/main.py
 
 # 或后台运行
-nohup ./venv/bin/python proxy-service/main.py > /tmp/proxy.log 2>&1 &
+nohup ./venv/bin/python proxy-service/main.py > logs/proxy.log 2>&1 &
 
 # 停止服务
 ps aux | grep "proxy-service/main.py" | grep -v grep | awk '{print $2}' | xargs -r kill
 
 # 端口: 8000
 # Health: http://localhost:8000/health
+
+# 日志目录
+# logs/proxy.log - Proxy Service 日志
+# logs/claude-cli.log - Claude Code CLI 执行日志
 ```
 
-### 5. 完整启动顺序
+### 5. 快捷启动脚本（推荐）
+
+```bash
+# 一键启动所有服务
+./scripts/start-all.sh
+
+# 一键停止所有服务
+./scripts/stop-all.sh
+
+# 一键重启所有服务
+./scripts/restart-all.sh
+
+# 查看服务状态
+./scripts/status.sh
+```
+
+**脚本特性：**
+- 自动创建 logs 目录
+- 防止重复启动
+- 统一日志输出到 `logs/` 目录
+- 彩色状态显示
+
+### 6. 手动启动顺序（逐步启动）
+
 ```bash
 # 1. 启动 MySQL
 docker start my-mysql
@@ -232,7 +259,7 @@ source venv/bin/activate
 python proxy-service/main.py &
 ```
 
-### 6. 数据库清理命令
+### 7. 数据库清理命令
 ```bash
 # 清空任务日志表
 docker exec -i my-mysql mysql -ucaptain -p123456 eagleeye -e "DELETE FROM crawler_task_log;"
@@ -248,7 +275,7 @@ docker exec -i my-mysql mysql -ucaptain -p123456 eagleeye -e "SELECT COUNT(*) FR
 ### 后端无法启动
 - 检查 MySQL 是否运行: `docker ps | grep mysql`
 - 检查端口占用: `netstat -tlnp | grep 9090`
-- 查看后端日志: `tail -100 /tmp/backend.log`
+- 查看后端日志: `tail -100 logs/backend.log`
 
 ### 前端无法访问后端 API
 - 检查 CORS 配置: `src/main/java/com/eagleeye/config/CorsConfig.java`
@@ -257,11 +284,13 @@ docker exec -i my-mysql mysql -ucaptain -p123456 eagleeye -e "SELECT COUNT(*) FR
 
 ### Proxy Service 无响应
 - 检查进程: `ps aux | grep proxy-service`
-- 查看日志: `tail -100 /tmp/proxy.log`
+- 查看 proxy 日志: `tail -100 logs/proxy.log`
+- 查看 Claude CLI 日志: `tail -100 logs/claude-cli.log`
 - 测试健康检查: `curl http://localhost:8000/health`
 
 ### 爬虫任务显示失败或文章数为 0
 - 检查 proxy-service 是否运行
 - 检查 Claude Code CLI 是否可用: `claude --version`
 - 查看爬取结果目录: `ls -la crawl_files/`
-- 查看后端日志中的错误: `tail -100 /tmp/backend.log | grep -i error`
+- 查看 Claude CLI 日志: `tail -100 logs/claude-cli.log`
+- 查看后端日志中的错误: `tail -100 logs/backend.log | grep -i error`

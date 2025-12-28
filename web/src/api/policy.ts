@@ -17,6 +17,7 @@ export interface PolicyVO {
   publishTime?: string; // 后端是 LocalDateTime，前端接收为字符串
   policyType?: string;
   importance?: string | number | { label?: string; color?: string }; // 兼容不同类型
+  relevance?: string; // 与产品的相关度：高、中、低
   areas?: string[];
   summary?: string; // 分析摘要
   suggestions?: SuggestionVO[]; // 建议列表

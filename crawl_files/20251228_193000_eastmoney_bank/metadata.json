@@ -1,0 +1,40 @@
+{
+  "batchId": "20251228_193000_eastmoney_bank",
+  "source": "东方财富网",
+  "sourceUrl": "https://bank.eastmoney.com/a/czzyh.html",
+  "sourceName": "eastmoney_bank",
+  "crawlTime": "2025-12-28T19:30:00",
+  "articleCount": 3,
+  "articles": [
+    {
+      "index": 1,
+      "title": "央行印发《人民币跨境支付系统业务规则》 规范人民币跨境支付系统（CIPS）业务行为",
+      "filename": "01_政策_央行印发人民币跨境支付系统业务规则.md",
+      "url": "https://finance.eastmoney.com/a/202512263603068862.html",
+      "category": "policy",
+      "publishTime": "2025-12-26T17:16:00",
+      "author": "财联社",
+      "tags": ["CIPS", "人民币跨境支付", "央行", "业务规则"]
+    },
+    {
+      "index": 2,
+      "title": "12月25日央行将开展4000亿元MLF操作 期限为1年期",
+      "filename": "02_政策_央行将开展4000亿元MLF操作.md",
+      "url": "https://finance.eastmoney.com/a/202512243600811118.html",
+      "category": "policy",
+      "publishTime": "2025-12-24T17:36:00",
+      "author": "王焕城",
+      "tags": ["MLF", "央行", "流动性", "货币政策"]
+    },
+    {
+      "index": 3,
+      "title": "月供要降！存量公积金贷款利率，即将下调！",
+      "filename": "03_政策_存量公积金贷款利率即将下调.md",
+      "url": "https://finance.eastmoney.com/a/202512283603682727.html",
+      "category": "policy",
+      "publishTime": "2025-12-28T10:15:00",
+      "author": "中国基金报",
+      "tags": ["公积金贷款", "利率下调", "央行", "住房贷款"]
+    }
+  ]
+}

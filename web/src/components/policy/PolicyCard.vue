@@ -98,11 +98,11 @@ const formatDate = computed(() => {
 // 重要性相关计算属性
 const importanceLabel = computed(() => {
   const map: Record<string, string> = {
-    '高': '高',
-    '中': '中',
-    '低': '低'
+    '高': '重要性: 高',
+    '中': '重要性: 中',
+    '低': '重要性: 低'
     };
-  return props.policy.importance ? (map[props.policy.importance] || props.policy.importance) : '';
+  return props.policy.importance ? (map[props.policy.importance] || `重要性: ${props.policy.importance}`) : '';
 });
 
 const importanceClass = computed(() => {

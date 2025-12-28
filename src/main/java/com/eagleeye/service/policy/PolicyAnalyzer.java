@@ -1,16 +1,21 @@
 package com.eagleeye.service.policy;
 
 import com.eagleeye.model.dto.AnalysisResult;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 
 /**
@@ -31,6 +36,12 @@ public class PolicyAnalyzer {
 
     public PolicyAnalyzer() {
         this.restTemplate = new RestTemplate();
+        // 配置消息转换器使用 UTF-8
+        restTemplate.setMessageConverters(java.util.List.of(
+            new StringHttpMessageConverter(StandardCharsets.UTF_8),
+            new MappingJackson2HttpMessageConverter(),
+            new ByteArrayHttpMessageConverter()
+        ));
     }
 
     /**
@@ -59,7 +70,8 @@ public class PolicyAnalyzer {
         String url = proxyServiceUrl + "/analyze-policy";
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setContentType(new MediaType("application", "json", StandardCharsets.UTF_8));
+        headers.setAcceptCharset(Collections.singletonList(StandardCharsets.UTF_8));
 
         // 构建请求体（新增 products 参数）
         PolicyAnalysisRequest request = new PolicyAnalysisRequest(markdownContent, products);

@@ -111,27 +111,27 @@ public class PolicyAnalysisServiceImpl implements PolicyAnalysisService {
         updateTaskLogStatus(taskLogId, "analyzing", null);
 
         // 3. 读取 metadata.json
-        List<String> policyMarkdownPaths;
+        List<ArticleInfo> policyArticles;
         try {
-            policyMarkdownPaths = getPolicyMarkdownPaths(batchPath);
+            policyArticles = getPolicyArticles(batchPath);
         } catch (IOException e) {
             log.error("读取 metadata.json 失败: batchPath={}", batchPath, e);
             throw new RuntimeException("读取批次文件失败: " + e.getMessage(), e);
         }
-        log.info("找到 {} 篇政策文章", policyMarkdownPaths.size());
+        log.info("找到 {} 篇政策文章", policyArticles.size());
 
-        int total = policyMarkdownPaths.size();
+        int total = policyArticles.size();
         int success = 0;
         int skipped = 0;
         int failed = 0;
 
         // 4. 逐个分析政策文章
-        for (String markdownPath : policyMarkdownPaths) {
+        for (ArticleInfo article : policyArticles) {
             try {
-                processPolicyArticle(markdownPath, userId);
+                processPolicyArticle(article.filePath, article.url, article.source, userId);
                 success++;
             } catch (Exception e) {
-                log.error("分析政策文章失败: {}", markdownPath, e);
+                log.error("分析政策文章失败: {}", article.filePath, e);
                 failed++;
             }
         }
@@ -145,16 +145,31 @@ public class PolicyAnalysisServiceImpl implements PolicyAnalysisService {
     }
 
     /**
-     * 获取批次中所有政策文章的 Markdown 文件路径
+     * 存储文章路径和 URL 映射的内部类
      */
-    private List<String> getPolicyMarkdownPaths(String batchPath) throws IOException {
-        List<String> policyPaths = new ArrayList<>();
+    private static class ArticleInfo {
+        String filePath;
+        String url;
+        String source;  // 新增：文章来源
+
+        ArticleInfo(String filePath, String url, String source) {
+            this.filePath = filePath;
+            this.url = url;
+            this.source = source;
+        }
+    }
+
+    /**
+     * 获取批次中所有政策文章的 Markdown 文件路径和 URL
+     */
+    private List<ArticleInfo> getPolicyArticles(String batchPath) throws IOException {
+        List<ArticleInfo> articles = new ArrayList<>();
 
         // 读取 metadata.json
         File metadataFile = new File(batchPath, "metadata.json");
         if (!metadataFile.exists()) {
             log.warn("metadata.json 不存在: {}", metadataFile.getAbsolutePath());
-            return policyPaths;
+            return articles;
         }
 
         // 读取文件内容
@@ -165,42 +180,53 @@ public class PolicyAnalysisServiceImpl implements PolicyAnalysisService {
 
         if (articlesNode == null || !articlesNode.isArray()) {
             log.warn("metadata.json 中没有 articles 数组");
-            return policyPaths;
+            return articles;
         }
+
+        // 【修复】从顶层读取 source（批次级别的来源）
+        JsonNode topSourceNode = rootNode.get("source");
+        String batchSource = (topSourceNode != null) ? topSourceNode.asText() : null;
 
         // 筛选 category 为 "policy" 的文章
         for (JsonNode articleNode : articlesNode) {
             JsonNode categoryNode = articleNode.get("category");
             if (categoryNode != null && "policy".equals(categoryNode.asText())) {
                 JsonNode filenameNode = articleNode.get("filename");
+                JsonNode urlNode = articleNode.get("url");
+
                 if (filenameNode != null) {
-                    // filename 字段只包含文件名，直接拼接
                     File file = new File(batchPath, filenameNode.asText());
                     if (!file.exists()) {
                         log.warn("文件不存在: {}", file.getAbsolutePath());
                         continue;
                     }
-                    policyPaths.add(file.getAbsolutePath());
+                    // 提取 URL（从 article）和 source（从顶层）
+                    String url = (urlNode != null) ? urlNode.asText() : null;
+                    articles.add(new ArticleInfo(file.getAbsolutePath(), url, batchSource));
                 }
             }
         }
 
-        return policyPaths;
+        return articles;
     }
 
     /**
      * 处理单篇政策文章
      */
     @Transactional
-    private void processPolicyArticle(String markdownPath, Long userId) throws IOException {
+    private void processPolicyArticle(String markdownPath, String sourceUrl, String source, Long userId) throws IOException {
         log.debug("处理政策文章: {}", markdownPath);
 
         // 1. 读取 Markdown 内容
         String markdownContent = Files.readString(Paths.get(markdownPath));
 
         // 2. 检查是否已存在（通过 sourceUrl 去重）
-        String sourceUrl = extractSourceUrl(markdownContent);
-        if (isPolicyExists(sourceUrl)) {
+        // 如果传入的 sourceUrl 为空，则尝试从 markdown 中提取
+        if (sourceUrl == null || sourceUrl.isEmpty()) {
+            sourceUrl = extractSourceUrl(markdownContent);
+        }
+
+        if (sourceUrl != null && isPolicyExists(sourceUrl)) {
             log.info("政策已存在，跳过: {}", sourceUrl);
             return;
         }
@@ -229,16 +255,15 @@ public class PolicyAnalysisServiceImpl implements PolicyAnalysisService {
         // 4. 调用 AI 分析（传递产品上下文）
         AnalysisResult result = policyAnalyzer.analyze(markdownContent, productsJson);
 
-        // 5. 存储到数据库
-        savePolicyAnalysisResult(markdownContent, result);
+        // 5. 存储到数据库（传入 sourceUrl 和 source）
+        savePolicyAnalysisResult(markdownContent, sourceUrl, source, result);
     }
 
     /**
      * 从 Markdown 内容中提取 sourceUrl
      */
     private String extractSourceUrl(String markdownContent) {
-        // 假设 Markdown 格式中有 "原文链接: xxx" 的字段
-        // 使用正则表达式或字符串匹配提取
+        // 1. 首先尝试从元数据格式提取
         String[] lines = markdownContent.split("\n");
         for (String line : lines) {
             if (line.contains("原文链接:") || line.contains("sourceUrl:")) {
@@ -247,6 +272,31 @@ public class PolicyAnalysisServiceImpl implements PolicyAnalysisService {
                         .trim();
             }
         }
+
+        // 2. 尝试从 ## 附 部分提取链接 [标题](URL)
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            if (line.contains("## 附") || line.contains("## 参考")) {
+                // 找到附节后，检查接下来的几行（最多5行）查找链接
+                java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\[([^\\]]+)\\]\\(([^)]+)\\)");
+                for (int j = i + 1; j < Math.min(i + 6, lines.length); j++) {
+                    String checkLine = lines[j];
+                    java.util.regex.Matcher matcher = pattern.matcher(checkLine);
+                    if (matcher.find()) {
+                        return matcher.group(2);
+                    }
+                }
+                break;
+            }
+        }
+
+        // 3. 尝试在整个内容中查找第一个 http 链接
+        java.util.regex.Pattern urlPattern = java.util.regex.Pattern.compile("https?://[^\\s\\])\\>]+");
+        java.util.regex.Matcher urlMatcher = urlPattern.matcher(markdownContent);
+        if (urlMatcher.find()) {
+            return urlMatcher.group();
+        }
+
         return null;
     }
 
@@ -266,12 +316,13 @@ public class PolicyAnalysisServiceImpl implements PolicyAnalysisService {
      * 保存政策分析结果到数据库
      */
     @Transactional
-    private void savePolicyAnalysisResult(String markdownContent, AnalysisResult result) {
+    private void savePolicyAnalysisResult(String markdownContent, String sourceUrl, String source, AnalysisResult result) {
         // 1. 保存 PolicyInfo
         PolicyInfo policyInfo = new PolicyInfo();
         policyInfo.setTitle(extractTitle(markdownContent));
-        policyInfo.setSource(extractSource(markdownContent));
-        policyInfo.setSourceUrl(extractSourceUrl(markdownContent));
+        // 优先使用传入的 source，否则从 markdown 中提取
+        policyInfo.setSource(source != null ? source : extractSource(markdownContent));
+        policyInfo.setSourceUrl(sourceUrl);  // 直接使用传入的 sourceUrl
         policyInfo.setPublishTime(extractPublishTime(markdownContent));
         policyInfo.setContent(markdownContent);
         policyInfo.setPolicyType(result.getPolicyType());
