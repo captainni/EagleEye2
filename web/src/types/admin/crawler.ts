@@ -17,7 +17,7 @@ export interface CssSchema {
 export interface CrawlerConfig {
   id: string;
   name: string;
-  targetType: 'policy' | 'competitor';
+  crawlerService: 'legacy' | 'eagleeye';
   strategyType: 'css' | 'llm' | 'none'; // 'none' for just fetching markdown
   schedule: string; // Could be cron string or descriptive like "每15分钟"
   status: 'enabled' | 'disabled';
@@ -62,7 +62,7 @@ export interface ConfigQueryParam {
   page?: number;
   pageSize?: number;
   name?: string;
-  targetType?: 'policy' | 'competitor';
+  crawlerService?: 'legacy' | 'eagleeye';
   status?: 'enabled' | 'disabled';
 }
 
@@ -98,7 +98,7 @@ export interface PaginatedResult<T> {
 // 对应后端 CrawlerConfigQueryDTO
 export interface CrawlerConfigQueryParam {
   keyword?: string;
-  targetType?: 'policy' | 'competitor';
+  crawlerService?: 'legacy' | 'eagleeye';
   isActive?: boolean;
   pageNum?: number;
   pageSize?: number;
@@ -108,7 +108,8 @@ export interface CrawlerConfigQueryParam {
 export interface CrawlerConfigVO {
   configId: number;
   targetName: string;
-  targetType: 'policy' | 'competitor';
+  crawlerService: 'legacy' | 'eagleeye';
+  resultPath?: string;
   triggerSchedule?: string;
   extractionStrategyType: 'css' | 'llm';
   isActive: boolean;
@@ -120,7 +121,8 @@ export interface CrawlerConfigVO {
 export interface CrawlerConfigDetailVO {
   configId: number;
   targetName: string;
-  targetType: 'policy' | 'competitor';
+  crawlerService: 'legacy' | 'eagleeye';
+  resultPath?: string;
   sourceUrls: string; // JSON string, needs parsing on frontend if needed
   crawlDepth?: number;
   triggerSchedule?: string;
@@ -139,7 +141,7 @@ export interface CrawlerConfigDetailVO {
 // 在调用 API 前需要 JSON.stringify()
 export interface CrawlerConfigCreateData {
   targetName: string;
-  targetType: 'policy' | 'competitor';
+  crawlerService: 'legacy' | 'eagleeye';
   sourceUrls: string; // JSON array string expected e.g., '["url1", "url2"]'
   crawlDepth?: number;
   triggerSchedule?: string;
@@ -154,11 +156,11 @@ export interface CrawlerConfigCreateData {
 // 对应后端 CrawlerConfigUpdateDTO
 export interface CrawlerConfigUpdateData {
   targetName?: string;
-  targetType?: 'policy' | 'competitor';
+  crawlerService?: 'legacy' | 'eagleeye';
   sourceUrls?: string; // JSON array string expected
   crawlDepth?: number;
   triggerSchedule?: string;
-  extractionStrategyType: 'css' | 'llm';
+  extractionStrategyType?: 'css' | 'llm';
   extractionSchema?: string; // JSON object string expected
   llmInstruction?: string;
   llmProviderConfig?: string; // JSON object string expected
@@ -209,4 +211,4 @@ export interface SuggestionQueryParam {
   pageSize?: number;
   status?: string;
   type?: string;
-} 
+}

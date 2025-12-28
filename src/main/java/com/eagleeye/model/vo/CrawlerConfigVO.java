@@ -15,8 +15,11 @@ public class CrawlerConfigVO {
     @ApiModelProperty("目标名称")
     private String targetName;
 
-    @ApiModelProperty("目标类型 (\'policy\', \'competitor\')")
-    private String targetType;
+    @ApiModelProperty("爬虫服务类型 ('legacy'=旧服务, 'eagleeye'=新服务)")
+    private String crawlerService;
+
+    @ApiModelProperty("最新爬取结果文件夹路径")
+    private String resultPath;
 
     @ApiModelProperty("触发计划 (Cron 表达式)")
     private String triggerSchedule;

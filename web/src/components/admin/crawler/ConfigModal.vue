@@ -23,10 +23,10 @@
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="目标类型" prop="targetType">
-            <el-select v-model="formData.targetType" placeholder="请选择目标类型" class="w-full">
-              <el-option label="政策" value="policy"></el-option>
-              <el-option label="竞品" value="competitor"></el-option>
+          <el-form-item label="爬虫服务" prop="crawlerService">
+            <el-select v-model="formData.crawlerService" placeholder="请选择爬虫服务" class="w-full">
+              <el-option label="EagleEye (新)" value="eagleeye"></el-option>
+              <el-option label="传统服务" value="legacy"></el-option>
             </el-select>
           </el-form-item>
         </el-col>
@@ -39,22 +39,28 @@
           placeholder="https://..."
         ></el-input>
       </el-form-item>
-      <el-row :gutter="16">
-        <el-col :span="12">
-          <el-form-item label="执行计划 (Cron)" prop="triggerSchedule">
-            <el-input v-model="formData.triggerSchedule" placeholder="例如: 0 0 * * * ? (每小时)"></el-input>
-          </el-form-item>
-        </el-col>
-        <el-col :span="12">
-          <el-form-item label="抓取深度 (可选)" prop="crawlDepth">
-            <el-input-number v-model="formData.crawlDepth" :min="0" placeholder="0表示只抓取起始URL"></el-input-number>
-          </el-form-item>
-        </el-col>
-      </el-row>
-       <el-form-item label="是否启用" prop="isActive">
-         <el-switch v-model="formData.isActive"></el-switch>
-       </el-form-item>
+      <!-- 传统服务专用配置 -->
+      <template v-if="formData.crawlerService === 'legacy'">
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="执行计划 (Cron)" prop="triggerSchedule">
+              <el-input v-model="formData.triggerSchedule" placeholder="例如: 0 0 * * * ? (每小时)"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="抓取深度 (可选)" prop="crawlDepth">
+              <el-input-number v-model="formData.crawlDepth" :min="0" placeholder="0表示只抓取起始URL"></el-input-number>
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </template>
 
+      <el-form-item label="是否启用" prop="isActive">
+        <el-switch v-model="formData.isActive"></el-switch>
+      </el-form-item>
+
+      <!-- 传统服务专用：提取策略配置 -->
+      <template v-if="formData.crawlerService === 'legacy'">
       <!-- Extraction Strategy -->
       <div class="border-t pt-4 mt-4">
         <h5 class="text-base font-medium text-gray-700 mb-3">提取策略</h5>
@@ -135,7 +141,10 @@
           </el-form-item>
         </div>
       </div>
+      </template>
 
+      <!-- 传统服务专用：Crawl4AI 配置 -->
+      <template v-if="formData.crawlerService === 'legacy'">
       <!-- Crawl4AI Override -->
       <div class="border-t pt-4 mt-4">
         <el-form-item label="Crawl4AI 高级配置覆盖 (JSON, 可选)" prop="crawl4aiConfigOverride" class="w-full">
@@ -165,6 +174,7 @@
           </p>
         </el-form-item>
       </div>
+      </template>
     </el-form>
     <template #footer>
       <div class="modal-footer">
@@ -214,7 +224,7 @@ const jsonSchemaPlaceholder = '{ "title": "Data", "type": "object", "properties"
 interface ConfigFormData {
     configId?: number;
     targetName?: string;
-    targetType?: 'policy' | 'competitor';
+    crawlerService?: 'legacy' | 'eagleeye';
     sourceUrls?: string;
     crawlDepth?: number;
     triggerSchedule?: string;
@@ -369,7 +379,7 @@ watch(() => props.visible, (newVal) => {
     if (!props.initialData) {
       // 没有初始数据时，使用默认值
       formData.value = {
-        targetType: 'policy',
+        crawlerService: 'eagleeye',
         extractionStrategyType: 'css',
         crawlDepth: 0,
         isActive: true,
@@ -394,7 +404,7 @@ watch(() => props.visible, (newVal) => {
 const formData = ref<ConfigFormData>({
     configId: undefined,
     targetName: undefined,
-    targetType: 'policy', // Default target type
+    crawlerService: 'eagleeye', // Default to new EagleEye service
     sourceUrls: undefined,
     crawlDepth: 0,
     triggerSchedule: '0 0 * * * ?', // Default: every hour
@@ -411,7 +421,7 @@ const validateJsonString = (rule: any, value: any, callback: any) => {
     callback(); // Allow empty or default empty object
     return;
   }
-  
+
   if (validateJSON(value)) {
     callback();
   } else {
@@ -421,15 +431,28 @@ const validateJsonString = (rule: any, value: any, callback: any) => {
 
 const formRules = ref<FormRules<ConfigFormData>>({
   targetName: [{ required: true, message: '请输入配置名称', trigger: 'blur' }],
-  targetType: [{ required: true, message: '请选择目标类型', trigger: 'change' }],
+  crawlerService: [{ required: true, message: '请选择爬虫服务', trigger: 'change' }],
   sourceUrls: [{ required: true, message: '请输入起始 URL (每行一个)', trigger: 'blur' }],
-  triggerSchedule: [{ required: true, message: '请输入执行计划 (Cron 格式)', trigger: 'blur' }],
-  extractionStrategyType: [{ required: true, message: '请选择提取策略类型', trigger: 'change' }],
+  // 传统服务专用字段验证
+  triggerSchedule: [
+    {
+      required: computed(() => formData.value.crawlerService === 'legacy').value,
+      message: '请输入执行计划 (Cron 格式)',
+      trigger: 'blur'
+    }
+  ],
+  extractionStrategyType: [
+    {
+      required: computed(() => formData.value.crawlerService === 'legacy').value,
+      message: '请选择提取策略类型',
+      trigger: 'change'
+    }
+  ],
   // Unified extractionSchema rule with conditional required
   extractionSchema: [
     {
-      // Required only if extractionStrategyType is 'css' or 'llm'
-      required: computed(() => formData.value.extractionStrategyType === 'css' || formData.value.extractionStrategyType === 'llm').value,
+      // Required only if crawlerService is 'legacy' AND extractionStrategyType is 'css' or 'llm'
+      required: computed(() => formData.value.crawlerService === 'legacy' && (formData.value.extractionStrategyType === 'css' || formData.value.extractionStrategyType === 'llm')).value,
       message: computed(() => formData.value.extractionStrategyType === 'css' ? '请输入 CSS 提取 Schema (JSON)' : '请输入 LLM 提取 Schema (Pydantic/JSON)').value,
       trigger: 'blur'
     },
@@ -438,7 +461,7 @@ const formRules = ref<FormRules<ConfigFormData>>({
   // Conditional validation for LLM specific fields
   llmProviderConfig: [
     {
-      required: computed(() => formData.value.extractionStrategyType === 'llm').value,
+      required: computed(() => formData.value.crawlerService === 'legacy' && formData.value.extractionStrategyType === 'llm').value,
       message: '请输入 LLM 模型配置 (JSON)',
       trigger: 'blur'
     },
@@ -446,7 +469,7 @@ const formRules = ref<FormRules<ConfigFormData>>({
   ],
   llmInstruction: [
     {
-      required: computed(() => formData.value.extractionStrategyType === 'llm').value,
+      required: computed(() => formData.value.crawlerService === 'legacy' && formData.value.extractionStrategyType === 'llm').value,
       message: '请输入 LLM 指令',
       trigger: 'blur'
     }
@@ -489,6 +512,25 @@ watch(() => formData.value.extractionStrategyType, (newType, oldType) => {
   }
 });
 
+// Watch crawlerService to clear validation for legacy-specific fields
+watch(() => formData.value.crawlerService, (newService, oldService) => {
+  if (configFormRef.value) {
+    nextTick(() => {
+      // Legacy服务专用字段列表
+      const legacyFields = ['triggerSchedule', 'extractionStrategyType', 'extractionSchema', 'llmProviderConfig', 'llmInstruction', 'crawl4aiConfigOverride'];
+
+      if (newService === 'eagleeye') {
+        // 切换到 EagleEye 服务时，清除所有 legacy 字段的验证
+        configFormRef.value?.clearValidate(legacyFields);
+      } else if (newService === 'legacy') {
+        // 切换到传统服务时，重新验证必填字段
+        configFormRef.value?.validateField('triggerSchedule').catch(err => console.warn("Ignoring validation error during service switch:", err?.message || err));
+        configFormRef.value?.validateField('extractionStrategyType').catch(err => console.warn("Ignoring validation error during service switch:", err?.message || err));
+      }
+    });
+  }
+});
+
 const handleClose = () => {
   emit('update:visible', false);
   emit('close');
@@ -501,86 +543,65 @@ const submitForm = async () => {
     const valid = await configFormRef.value.validate();
     if (valid) {
       loading.value = true;
-      
-      // 准备数据进行保存，确保格式正确
-      const dataToSave = {
-        ...formData.value,
-        crawlDepth: formData.value.crawlDepth !== undefined ? Number(formData.value.crawlDepth) : 0,
+
+      // 准备基础数据（所有服务都需要）
+      const baseData = {
+        targetName: formData.value.targetName,
+        crawlerService: formData.value.crawlerService,
+        sourceUrls: formData.value.sourceUrls,
+        isActive: formData.value.isActive !== undefined ? formData.value.isActive : true,
       };
-      
+
       // 移除configId字段，避免后端错误
+      const dataToSave = { ...baseData };
+
+      // 根据 crawlerService 添加不同的字段
+      if (formData.value.crawlerService === 'eagleeye') {
+        // EagleEye 服务：只需要基础字段，不需要其他配置
+        console.log('提交 EagleEye 服务配置');
+      } else {
+        // 传统服务：需要完整的配置字段
+        dataToSave.triggerSchedule = formData.value.triggerSchedule;
+        dataToSave.crawlDepth = formData.value.crawlDepth !== undefined ? Number(formData.value.crawlDepth) : 0;
+        dataToSave.extractionStrategyType = formData.value.extractionStrategyType;
+        dataToSave.extractionSchema = safeJSONStringify(formData.value.extractionSchema || '{}');
+        dataToSave.llmProviderConfig = safeJSONStringify(formData.value.llmProviderConfig || '{}');
+        dataToSave.crawl4aiConfigOverride = safeJSONStringify(formData.value.crawl4aiConfigOverride || '{}');
+
+        // LLM 指令
+        if (formData.value.extractionStrategyType === 'llm') {
+          dataToSave.llmInstruction = formData.value.llmInstruction || '';
+        }
+
+        console.log('提交传统服务配置');
+      }
+
+      // 移除configId字段，避免后端错误（如果有）
       if ('configId' in dataToSave) {
         delete dataToSave.configId;
       }
-      
-      // 移除createTime和updateTime字段
+
+      // 移除createTime和updateTime字段（如果有）
       if ('createTime' in dataToSave) {
         delete dataToSave.createTime;
       }
-      
       if ('updateTime' in dataToSave) {
         delete dataToSave.updateTime;
       }
-      
-      // 处理 sourceUrls - 确保格式正确
-      if (typeof dataToSave.sourceUrls === 'string') {
-        // 原始URL可能较长，先记录它用于调试
-        console.log('原始sourceUrls (前20个字符):', 
-          dataToSave.sourceUrls.substring(0, 20) + 
-          (dataToSave.sourceUrls.length > 20 ? '...' : ''));
-          
-        // 防止URL过长或包含特殊字符导致问题
-        try {
-          // 我们不改变URL内容，只确保它不会造成保存问题
-          const urls = dataToSave.sourceUrls.split('\n');
-          // 检查并记录任何异常URL
-          for (const url of urls) {
-            if (url.trim().length > 0) {
-              if (url.length > 500) {
-                console.warn('发现异常长的URL:', url.substring(0, 30) + '...');
-              }
-            }
-          }
-        } catch (e) {
-          console.error('处理URL时出错:', e);
-        }
-      }
-      
-      // 确保所有JSON字段格式正确
-      // 使用显式的字段类型防止TypeScript错误
-      const jsonFields = ['extractionSchema', 'llmProviderConfig', 'crawl4aiConfigOverride'] as const;
-      
-      // 类型安全地处理JSON字段
-      for (const field of jsonFields) {
-        // 显式地访问和设置特定的字段
-        if (field === 'extractionSchema') {
-          dataToSave.extractionSchema = safeJSONStringify(dataToSave.extractionSchema);
-        } else if (field === 'llmProviderConfig') {
-          dataToSave.llmProviderConfig = safeJSONStringify(dataToSave.llmProviderConfig);
-        } else if (field === 'crawl4aiConfigOverride') {
-          dataToSave.crawl4aiConfigOverride = safeJSONStringify(dataToSave.crawl4aiConfigOverride);
-        }
-      }
-      
-      // 确保其他字段也有合理默认值
-      if (dataToSave.extractionStrategyType === 'llm' && !dataToSave.llmInstruction) {
-        dataToSave.llmInstruction = ''; // 空字符串作为默认值
-      }
-      
+
       // 调试提交的数据 - 只打印关键字段，避免大量数据
       try {
         const debugData = {
           targetName: dataToSave.targetName,
-          targetType: dataToSave.targetType,
+          crawlerService: dataToSave.crawlerService,
           sourceUrlsLength: dataToSave.sourceUrls ? dataToSave.sourceUrls.length : 0,
-          extractionStrategyType: dataToSave.extractionStrategyType,
           isActive: dataToSave.isActive,
         };
         console.log('表单最终提交数据 (摘要):', debugData);
       } catch (e) {
         console.error('打印数据摘要时出错:', e);
       }
-      
+
       emit('save', dataToSave);
       // Success handling (message, close) should be done in the parent component after API call
     } else {
@@ -592,7 +613,7 @@ const submitForm = async () => {
     // Error handling should ideally be in the parent
   } finally {
     // Loading state might be better controlled by parent based on API call duration
-     loading.value = false; 
+     loading.value = false;
   }
 };
 

@@ -13,9 +13,11 @@
         </template>
       </el-table-column>
 
-      <el-table-column prop="targetType" label="目标类型" min-width="100">
+      <el-table-column prop="crawlerService" label="爬虫服务" min-width="100">
         <template #default="{ row }">
-          <TypeTag :type="row.targetType" />
+          <el-tag :type="row.crawlerService === 'eagleeye' ? 'success' : 'info'" size="small">
+            {{ row.crawlerService === 'eagleeye' ? 'EagleEye' : '传统' }}
+          </el-tag>
         </template>
       </el-table-column>
 
@@ -63,9 +65,16 @@
                 <i :class="row.isActive ? 'fas fa-toggle-off' : 'fas fa-toggle-on'"></i>
               </el-button>
             </el-tooltip>
-             <el-tooltip content="立即触发" placement="top">
-               <el-button link type="info" @click="$emit('trigger', row.configId)" :disabled="!row.isActive" class="p-1 text-xs">
-                  <i class="fas fa-play-circle"></i>
+            <el-tooltip :content="getTriggerButtonTooltip(row)" placement="top">
+               <el-button
+                 link
+                 :type="getTriggerButtonType(row)"
+                 @click="handleTrigger(row)"
+                 :disabled="!row.isActive || isTaskRunning(row.configId)"
+                 class="p-1 text-xs trigger-button"
+                 :class="{ 'spinning': isTaskRunning(row.configId) }"
+               >
+                  <i :class="getTriggerButtonIcon(row)" class="trigger-icon"></i>
                 </el-button>
             </el-tooltip>
           </div>
@@ -85,7 +94,7 @@ import TypeTag from './TypeTag.vue';
 import StrategyTypeTag from './StrategyTypeTag.vue';
 import { format } from 'date-fns';
 
-defineProps({
+const props = defineProps({
   configs: {
     type: Array as PropType<CrawlerConfigVO[]>,
     required: true,
@@ -94,9 +103,17 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  runningTaskIds: {
+    type: Array as PropType<number[]>,
+    default: () => [],
+  },
+  completedTaskIds: {
+    type: Array as PropType<number[]>,
+    default: () => [],
+  },
 });
 
-defineEmits(['edit', 'delete', 'toggleStatus', 'trigger']);
+const emit = defineEmits(['edit', 'delete', 'toggleStatus', 'trigger']);
 
 const tableRowClassName = ({ row }: { row: CrawlerConfigVO }) => {
   if (!row.isActive) {
@@ -119,12 +136,66 @@ const formatDateTime = (dateTimeString?: string): string => {
   }
 };
 
+const isTaskRunning = (configId: number): boolean => {
+  return (props.runningTaskIds || []).includes(configId);
+};
+
+const isTaskCompleted = (configId: number): boolean => {
+  return (props.completedTaskIds || []).includes(configId);
+};
+
+const getTriggerButtonTooltip = (row: CrawlerConfigVO): string => {
+  if (isTaskRunning(row.configId)) {
+    return '正在爬取中...';
+  }
+  if (isTaskCompleted(row.configId)) {
+    return '爬取完成';
+  }
+  return '立即触发';
+};
+
+const getTriggerButtonType = (row: CrawlerConfigVO): string => {
+  if (isTaskCompleted(row.configId)) {
+    return 'success';
+  }
+  return 'info';
+};
+
+const getTriggerButtonIcon = (row: CrawlerConfigVO): string => {
+  if (isTaskRunning(row.configId)) {
+    return 'fas fa-circle-notch';
+  }
+  if (isTaskCompleted(row.configId)) {
+    return 'fas fa-check-circle';
+  }
+  return 'fas fa-play-circle';
+};
+
+const handleTrigger = (row: CrawlerConfigVO) => {
+  emit('trigger', row.configId);
+};
+
+
 </script>
 
 <style>
 .el-table .el-button.p-1 {
     padding: 0.25rem;
     font-size: 1rem;
+}
+
+/* 触发按钮旋转动画 */
+.trigger-button.spinning .trigger-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .el-table thead th {

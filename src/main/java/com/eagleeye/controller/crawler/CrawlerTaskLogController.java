@@ -12,6 +12,7 @@ import io.swagger.annotations.ApiParam;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -44,9 +45,9 @@ public class CrawlerTaskLogController {
             @ApiParam("每页记录数") @RequestParam(defaultValue = "10") Integer pageSize) {
 
         try {
-            log.info("接收到爬虫任务日志列表请求: status={}, configId={}, startTime={}, endTime={}, pageNum={}, pageSize={}", 
+            log.info("接收到爬虫任务日志列表请求: status={}, configId={}, startTime={}, endTime={}, pageNum={}, pageSize={}",
                     status, configId, startTime, endTime, pageNum, pageSize);
-                
+
             // 构建查询对象
             TaskLogQueryDTO queryDTO = new TaskLogQueryDTO();
             queryDTO.setStatus(status);
@@ -58,7 +59,7 @@ public class CrawlerTaskLogController {
 
             // 查询任务日志
             Page<CrawlerTaskLogVO> page = crawlerTaskLogService.listTaskLogs(queryDTO);
-            
+
             // 转换为通用分页结果
             CommonPage<CrawlerTaskLogVO> result = new CommonPage<>();
             result.setPageNum(page.getCurrent());
@@ -66,13 +67,36 @@ public class CrawlerTaskLogController {
             result.setTotal(page.getTotal());
             result.setTotalPage(page.getPages());
             result.setList(page.getRecords());
-            
+
             log.info("查询爬虫任务日志成功, 共找到 {} 条记录", page.getTotal());
-            
+
             return CommonResult.success(result);
         } catch (Exception e) {
             log.error("获取爬虫任务日志列表失败", e);
             return CommonResult.failed("获取爬虫任务日志列表失败: " + e.getMessage());
+        }
+    }
+
+    @ApiOperation("根据任务ID查询任务状态")
+    @GetMapping("/{taskId}/status")
+    public CommonResult<CrawlerTaskLogVO> getTaskStatus(
+            @ApiParam("任务ID") @PathVariable String taskId) {
+
+        try {
+            log.info("接收到任务状态查询请求: taskId={}", taskId);
+
+            CrawlerTaskLogVO taskLog = crawlerTaskLogService.getByTaskId(taskId);
+
+            if (taskLog != null) {
+                log.info("查询任务状态成功: taskId={}, status={}", taskId, taskLog.getStatus());
+                return CommonResult.success(taskLog);
+            } else {
+                log.warn("任务不存在: taskId={}", taskId);
+                return CommonResult.failed("任务不存在: taskId=" + taskId);
+            }
+        } catch (Exception e) {
+            log.error("查询任务状态失败: taskId={}", taskId, e);
+            return CommonResult.failed("查询任务状态失败: " + e.getMessage());
         }
     }
 } 

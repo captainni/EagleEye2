@@ -31,11 +31,6 @@ public class CrawlerConfig implements Serializable {
     private String targetName;
 
     /**
-     * 目标类型 (\'policy\', \'competitor\')
-     */
-    private String targetType;
-
-    /**
      * 起始/入口 URL 列表 (建议JSON格式)
      */
     private String sourceUrls;
@@ -44,6 +39,16 @@ public class CrawlerConfig implements Serializable {
      * 抓取深度 (可选, 默认1)
      */
     private Integer crawlDepth;
+
+    /**
+     * 爬虫服务类型 ('legacy'=旧服务, 'eagleeye'=新服务)
+     */
+    private String crawlerService;
+
+    /**
+     * 最新爬取结果文件夹路径
+     */
+    private String resultPath;
 
     /**
      * 触发计划 (Cron 表达式)

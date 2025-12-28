@@ -35,6 +35,7 @@
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/entity/UserProduct.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/vo/CompetitorDetailVO.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/vo/AttachmentVO.java
+/home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/vo/OperationResult.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/controller/crawler/CrawlerTaskLogController.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/EagleEyeApplication.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/service/crawler/impl/CrawlerTaskLogServiceImpl.java
@@ -62,6 +63,7 @@
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/service/crawler/CrawlerTaskLogService.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/entity/UserSettings.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/service/crawler/impl/CrawlerResultConsumer.java
+/home/captain/projects/EagleEye2/src/main/java/com/eagleeye/service/crawler/impl/EagleEyeCrawlerServiceImpl.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/controller/dashboard/DashboardController.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/repository/UserSettingsRepository.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/service/crawler/impl/CrawlerConfigAdminServiceImpl.java
@@ -86,6 +88,7 @@
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/config/JacksonConfig.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/dto/RequirementUpdateDTO.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/entity/User.java
+/home/captain/projects/EagleEye2/src/main/java/com/eagleeye/service/crawler/EagleEyeCrawlerService.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/common/api/ResultCode.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/repository/RequirementRepository.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/vo/PolicySuggestionVO.java

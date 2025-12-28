@@ -1,0 +1,48 @@
+{
+  "batchId": "20251228_114600_eastmoney_czzyh",
+  "sourceName": "eastmoney_czzyh",
+  "sourceUrl": "https://bank.eastmoney.com/a/czzyh.html",
+  "sourceWebsite": "东方财富网银行频道",
+  "crawlTime": "2025-12-28T11:46:00+08:00",
+  "articleCount": 3,
+  "categories": {
+    "policy": 0,
+    "competitor": 3
+  },
+  "articles": [
+    {
+      "index": 1,
+      "filename": "01_竞品_强化硬科技金融支持力度AIC基金加速落地.md",
+      "title": "强化硬科技金融支持力度 AIC基金加速落地",
+      "url": "https://bank.eastmoney.com/a/202512273603643152.html",
+      "category": "competitor",
+      "publishTime": "2025-12-27",
+      "author": "中国经营报",
+      "tags": ["AIC", "股权投资", "基金", "硬科技"],
+      "summary": "报道银行系金融资产投资公司（AIC）股权投资基金陆续落地，涉及工银、农银、中银、建信等多家银行的AIC基金布局，重点支持硬科技领域。"
+    },
+    {
+      "index": 2,
+      "filename": "02_竞品_又一地个人消费贷省补揭开面纱.md",
+      "title": "又一地个人消费贷"省补"揭开面纱 海南一地方法人银行官宣操作细节",
+      "url": "https://bank.eastmoney.com/a/202512263602846140.html",
+      "category": "competitor",
+      "publishTime": "2025-12-26",
+      "author": "财联社",
+      "tags": ["消费贷", "财政贴息", "海南", "银行"],
+      "summary": "海南农商银行跟进个人消费贷财政贴息政策，四川、贵州、重庆、海南四地已落地消费贷"省补"，各地贴息模式和标准不尽相同。"
+    },
+    {
+      "index": 3,
+      "filename": "03_竞品_中国银行业协会杨江英科技金融讲话.md",
+      "title": "中国银行业协会党委委员、副秘书长杨江英：银行业做好"科技金融"大文章 助力科技强国建设",
+      "url": "https://bank.eastmoney.com/a/202512273603321457.html",
+      "category": "competitor",
+      "publishTime": "2025-12-27",
+      "author": "证券日报",
+      "tags": ["科技金融", "银行业", "新质生产力", "科技创新"],
+      "summary": "中国银行业协会副秘书长在2025证券市场年会的演讲，强调银行业要构建与科技创新相适配的科技金融体制，大型银行应发挥综合化经营优势，中小银行应打造科技金融特色服务体系。"
+    }
+  ],
+  "notes": "由于目标页面采用动态加载技术，webReader 工具无法获取完整的文章列表。本次爬取通过网络搜索获取该网站最新文章链接，然后逐个爬取文章内容。"
+}

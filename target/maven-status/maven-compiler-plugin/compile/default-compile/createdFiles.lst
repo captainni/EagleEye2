@@ -22,6 +22,7 @@ com/eagleeye/model/dto/UserSubscriptionCreateDTO.class
 com/eagleeye/model/dto/CrawlerConfigQueryDTO.class
 com/eagleeye/model/vo/dashboard/DashboardStatsVO$DailyDataVO.class
 com/eagleeye/service/crawler/impl/UserSubscriptionServiceImpl.class
+com/eagleeye/service/crawler/EagleEyeCrawlerService$CrawlResult.class
 com/eagleeye/config/SecurityConfig.class
 com/eagleeye/model/vo/dashboard/CompetitorSummaryVO.class
 com/eagleeye/service/competitor/impl/CompetitorServiceImpl.class
@@ -36,6 +37,7 @@ com/eagleeye/model/entity/UserSourceSubscription.class
 com/eagleeye/service/competitor/impl/CompetitorServiceImpl$1.class
 com/eagleeye/service/settings/SettingsService.class
 com/eagleeye/service/dashboard/impl/DashboardServiceImpl.class
+com/eagleeye/service/crawler/EagleEyeCrawlerService$TriggerAsyncResult.class
 com/eagleeye/model/vo/CrawlerConfigVO.class
 com/eagleeye/model/entity/CrawlerConfig.class
 com/eagleeye/repository/CompetitorRepository.class
@@ -68,15 +70,18 @@ com/eagleeye/service/settings/impl/SettingsServiceImpl$2.class
 com/eagleeye/model/entity/CompetitorTag.class
 com/eagleeye/controller/dashboard/DashboardController.class
 com/eagleeye/service/policy/impl/PolicyServiceImpl$3.class
+com/eagleeye/service/crawler/EagleEyeCrawlerService.class
 com/eagleeye/model/dto/UserSubscriptionUpdateDTO.class
 com/eagleeye/model/vo/PushSettingsVO.class
 com/eagleeye/repository/PolicySuggestionRepository.class
 com/eagleeye/service/requirement/impl/RequirementServiceImpl.class
 com/eagleeye/model/vo/CompetitorDetailVO.class
+com/eagleeye/service/crawler/CrawlerConfigAdminService$TriggerResult.class
 com/eagleeye/model/vo/SettingsDataVO.class
 com/eagleeye/model/vo/dashboard/DashboardStatsVO$CompetitorStatVO.class
 com/eagleeye/common/api/IErrorCode.class
 com/eagleeye/model/vo/ProductVO.class
+com/eagleeye/service/crawler/impl/EagleEyeCrawlerServiceImpl.class
 com/eagleeye/repository/UserSourceSubscriptionRepository.class
 com/eagleeye/model/vo/dashboard/PolicySummaryVO.class
 com/eagleeye/service/policy/impl/PolicyServiceImpl.class

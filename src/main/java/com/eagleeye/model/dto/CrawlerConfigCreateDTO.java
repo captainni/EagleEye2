@@ -15,9 +15,9 @@ public class CrawlerConfigCreateDTO {
     @NotBlank(message = "目标名称不能为空")
     private String targetName;
 
-    @ApiModelProperty(value = "目标类型 (\'policy\', \'competitor\')", required = true, example = "policy")
-    @NotBlank(message = "目标类型不能为空")
-    private String targetType;
+    @ApiModelProperty(value = "爬虫服务类型 ('legacy'=旧服务, 'eagleeye'=新服务)", required = true, example = "eagleeye")
+    @NotBlank(message = "爬虫服务类型不能为空")
+    private String crawlerService;
 
     @ApiModelProperty(value = "起始/入口 URL 列表 (JSON格式)", required = true, example = "[\"http://www.pbc.gov.cn/zhengcehuobisi/125207/125213/index.html\"]")
     @NotBlank(message = "源URL不能为空")
@@ -29,12 +29,10 @@ public class CrawlerConfigCreateDTO {
     @ApiModelProperty(value = "触发计划 (Cron 表达式)", example = "0 0 * * * ?")
     private String triggerSchedule;
 
-    @ApiModelProperty(value = "提取策略类型 (\'css\', \'llm\')", required = true, example = "css")
-    @NotBlank(message = "提取策略类型不能为空")
+    @ApiModelProperty(value = "提取策略类型 (\'css\', \'llm\') - 仅传统服务需要", example = "css")
     private String extractionStrategyType;
 
-    @ApiModelProperty(value = "提取Schema (JSON格式)", required = true, example = "{\"title\":\"h2 a\", \"url\":\"h2 a[href]\"}")
-    @NotBlank(message = "提取Schema不能为空")
+    @ApiModelProperty(value = "提取Schema (JSON格式) - 仅传统服务需要", example = "{\"title\":\"h2 a\", \"url\":\"h2 a[href]\"}")
     private String extractionSchema;
 
     @ApiModelProperty(value = "LLM提取指令")

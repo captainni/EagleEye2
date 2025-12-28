@@ -10,6 +10,8 @@
     <ConfigTable
       :configs="configs"
       :loading="loading"
+      :runningTaskIds="runningTaskIds"
+      :completedTaskIds="completedTaskIds"
       @edit="openEditModal"
       @delete="handleDelete"
       @toggle-status="handleToggleStatus"
@@ -59,7 +61,10 @@ import {
   updateCrawlerConfigStatus,
   triggerCrawlerConfig,
   getCrawlerConfigDetail,
-  safeJSONStringify
+  safeJSONStringify,
+  getTaskStatus,
+  type TriggerResult,
+  type TaskStatus
 } from '@/api/admin/crawler';
 import { formatJSON } from '@/utils/jsonUtils';
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -67,6 +72,8 @@ import type { PaginatedResult } from '@/types/admin/crawler';
 
 const loading = ref(false);
 const configs = ref<CrawlerConfigVO[]>([]);
+const runningTaskIds = ref<number[]>([]); // 正在执行的任务配置ID列表
+const completedTaskIds = ref<number[]>([]); // 已完成的任务配置ID列表
 const queryParams = reactive<CrawlerConfigQueryParam>({
   pageNum: 1,
   pageSize: 10,
@@ -285,15 +292,71 @@ const handleToggleStatus = async (configId: number, newStatus: boolean) => {
 };
 
 const handleTrigger = async (configId: number) => {
-  loading.value = true;
   try {
-    await triggerCrawlerConfig(configId);
-    ElMessage.success('任务已触发（已发送到队列）');
+    const result: TriggerResult = await triggerCrawlerConfig(configId);
+
+    if (result.success) {
+      if (result.taskId) {
+        // EagleEye 爬虫，返回了 taskId，开始轮询
+        ElMessage.info(result.message || '任务已开始，正在后台执行...');
+
+        // 添加到运行中列表
+        runningTaskIds.value = [...runningTaskIds.value, configId];
+        // 从已完成列表移除
+        completedTaskIds.value = completedTaskIds.value.filter(id => id !== configId);
+
+        // 开始轮询任务状态
+        let pollCount = 0;
+        const maxPolls = 100; // 最多轮询 100 次（5 分钟）
+        const pollInterval = setInterval(async () => {
+          pollCount++;
+
+          try {
+            const status: TaskStatus = await getTaskStatus(result.taskId!);
+
+            if (status.status === 'success') {
+              clearInterval(pollInterval);
+              // 从运行中移除，添加到已完成
+              runningTaskIds.value = runningTaskIds.value.filter(id => id !== configId);
+              completedTaskIds.value = [...completedTaskIds.value, configId];
+
+              ElMessage.success(`爬取完成！成功爬取 ${status.articleCount || 0} 篇文章`);
+              // 刷新列表以更新 resultPath
+              fetchConfigs();
+
+              // 3秒后移除完成状态
+              setTimeout(() => {
+                completedTaskIds.value = completedTaskIds.value.filter(id => id !== configId);
+              }, 3000);
+            } else if (status.status === 'failure') {
+              clearInterval(pollInterval);
+              // 从运行中移除
+              runningTaskIds.value = runningTaskIds.value.filter(id => id !== configId);
+              ElMessage.error(`爬取失败: ${status.errorMessage || '未知错误'}`);
+            } else if (pollCount >= maxPolls) {
+              clearInterval(pollInterval);
+              // 从运行中移除
+              runningTaskIds.value = runningTaskIds.value.filter(id => id !== configId);
+              ElMessage.warning('任务执行超时，请稍后查看任务状态');
+            }
+          } catch (error) {
+            clearInterval(pollInterval);
+            // 从运行中移除
+            runningTaskIds.value = runningTaskIds.value.filter(id => id !== configId);
+            console.error('Failed to poll task status:', error);
+            ElMessage.error('查询任务状态失败');
+          }
+        }, 3000); // 每 3 秒轮询一次
+      } else {
+        // 传统爬虫，无 taskId
+        ElMessage.success(result.message || '任务已发送到队列');
+      }
+    } else {
+      ElMessage.error(result.message || '触发任务失败');
+    }
   } catch (error: any) {
     console.error('Failed to trigger config task:', error);
     ElMessage.error(error?.message || error?.msg || '触发任务失败');
-  } finally {
-    loading.value = false;
   }
 };
 

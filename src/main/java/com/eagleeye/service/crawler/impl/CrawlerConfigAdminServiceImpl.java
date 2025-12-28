@@ -16,6 +16,7 @@ import com.eagleeye.model.vo.CrawlerConfigVO;
 import com.eagleeye.repository.CrawlerConfigRepository;
 import com.eagleeye.service.crawler.CrawlerConfigAdminService;
 import com.eagleeye.service.crawler.CrawlerTaskLogService;
+import com.eagleeye.service.crawler.EagleEyeCrawlerService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -39,9 +40,12 @@ public class CrawlerConfigAdminServiceImpl extends ServiceImpl<CrawlerConfigRepo
 
     @Resource
     private RabbitTemplate rabbitTemplate; // 用于发送MQ消息
-    
+
     @Resource
     private CrawlerTaskLogService crawlerTaskLogService; // 添加任务日志服务
+
+    @Resource
+    private EagleEyeCrawlerService eagleEyeCrawlerService; // EagleEye 爬虫服务
 
     private static final String TASK_QUEUE_NAME = "eagleeye.crawl.tasks"; // 定义队列名称常量
 
@@ -62,7 +66,7 @@ public class CrawlerConfigAdminServiceImpl extends ServiceImpl<CrawlerConfigRepo
         LambdaQueryWrapper<CrawlerConfig> wrapper = Wrappers.lambdaQuery(CrawlerConfig.class)
                 .eq(CrawlerConfig::getIsDeleted, false) // 只查询未删除的
                 .like(StringUtils.hasText(queryDTO.getKeyword()), CrawlerConfig::getTargetName, queryDTO.getKeyword())
-                .eq(StringUtils.hasText(queryDTO.getTargetType()), CrawlerConfig::getTargetType, queryDTO.getTargetType())
+                .eq(StringUtils.hasText(queryDTO.getCrawlerService()), CrawlerConfig::getCrawlerService, queryDTO.getCrawlerService())
                 .eq(queryDTO.getIsActive() != null, CrawlerConfig::getIsActive, queryDTO.getIsActive())
                 .orderByDesc(CrawlerConfig::getUpdateTime); // 按更新时间降序
 
@@ -127,6 +131,34 @@ public class CrawlerConfigAdminServiceImpl extends ServiceImpl<CrawlerConfigRepo
     }
 
     @Override
+    public TriggerResult triggerConfigWithTaskId(Long configId) {
+        CrawlerConfig config = this.getOne(Wrappers.lambdaQuery(CrawlerConfig.class)
+                .eq(CrawlerConfig::getConfigId, configId)
+                .eq(CrawlerConfig::getIsDeleted, false)
+                .eq(CrawlerConfig::getIsActive, true));
+
+        if (config == null) {
+            log.warn("Cannot trigger config: configId={}, not found, deleted, or inactive.", configId);
+            return new TriggerResult(false, null, "配置不存在、已删除或未激活");
+        }
+
+        // 根据 crawler_service 选择调用方式
+        String crawlerService = config.getCrawlerService();
+        if ("eagleeye".equals(crawlerService)) {
+            // 使用新的 EagleEye 爬虫服务（异步）
+            return triggerEagleEyeCrawlerAsync(config);
+        } else {
+            // 使用旧的 RabbitMQ 方式（立即返回，无 taskId）
+            boolean success = triggerLegacyCrawler(config);
+            if (success) {
+                return new TriggerResult(true, null, "任务已发送到队列");
+            } else {
+                return new TriggerResult(false, null, "发送到队列失败");
+            }
+        }
+    }
+
+    @Override
     public boolean triggerConfig(Long configId) {
         CrawlerConfig config = this.getOne(Wrappers.lambdaQuery(CrawlerConfig.class)
                 .eq(CrawlerConfig::getConfigId, configId)
@@ -138,66 +170,175 @@ public class CrawlerConfigAdminServiceImpl extends ServiceImpl<CrawlerConfigRepo
             return false;
         }
 
-        // 构造任务消息
-        Map<String, Object> taskMessage = new HashMap<>();
-        String taskId = UUID.randomUUID().toString(true); // 生成唯一任务ID
-        taskMessage.put("task_id", taskId);
-        taskMessage.put("config_id", config.getConfigId());
-        // 简化处理，直接传递 URLs，实际可能需要更复杂的URL生成逻辑
-        // 正确处理 sourceUrls: 按行分割
-        List<String> urls = List.of(); // Default to empty list
+        // 根据 crawler_service 选择调用方式
+        String crawlerService = config.getCrawlerService();
+        if ("eagleeye".equals(crawlerService)) {
+            // 使用新的 EagleEye 爬虫服务
+            return triggerEagleEyeCrawler(config);
+        } else {
+            // 使用旧的 RabbitMQ 方式 (默认)
+            return triggerLegacyCrawler(config);
+        }
+    }
+
+    /**
+     * 使用 EagleEye 爬虫服务触发爬虫
+     */
+    private boolean triggerEagleEyeCrawler(CrawlerConfig config) {
+        log.info("触发 EagleEye 爬虫服务: configId={}, targetName={}", config.getConfigId(), config.getTargetName());
+
+        // 处理 sourceUrls
+        List<String> urls = List.of();
         if (StringUtils.hasText(config.getSourceUrls())) {
-            urls = Arrays.stream(config.getSourceUrls().split("\\r?\\n")) // Split by newline (Windows/Unix)
-                    .map(String::trim) // Trim whitespace
-                    .filter(StringUtils::hasText) // Filter out empty lines
+            urls = Arrays.stream(config.getSourceUrls().split("\\r?\\n"))
+                    .map(String::trim)
+                    .filter(StringUtils::hasText)
                     .collect(Collectors.toList());
         }
 
         if (urls.isEmpty()) {
-             log.warn("Cannot trigger config: configId={}, sourceUrls is empty or contains only whitespace.", configId);
-             return false; // Do not send task if no valid URLs found
+            log.warn("Cannot trigger EagleEye crawler: configId={}, sourceUrls is empty.", config.getConfigId());
+            return false;
         }
 
-        taskMessage.put("target_urls", urls); // 使用处理后的 URL 列表
-        taskMessage.put("trigger_type", "manual"); // 手动触发
-        taskMessage.put("timestamp", LocalDateTime.now().toString());
+        // 使用第一个 URL 作为列表页，sourceName 使用 targetName
+        String listUrl = urls.get(0);
+        String sourceName = config.getTargetName().replaceAll("[^a-zA-Z0-9_]", "_").toLowerCase();
 
-        // 首先记录任务日志
+        // 记录任务日志
         CrawlerTaskLog taskLog = new CrawlerTaskLog();
-        taskLog.setTaskId(taskId);
-        taskLog.setConfigId(configId);
-        taskLog.setTargetUrl(urls.get(0)); // 记录第一个URL作为主要目标
+        taskLog.setTaskId(UUID.randomUUID().toString(true));
+        taskLog.setConfigId(config.getConfigId());
+        taskLog.setTargetUrl(listUrl);
         taskLog.setStartTime(LocalDateTime.now());
-        taskLog.setStatus("processing"); // 初始状态为处理中
-        
-        // 异步保存任务日志
+        taskLog.setStatus("processing");
+
         boolean logSaved = crawlerTaskLogService.saveTaskLog(taskLog);
         if (!logSaved) {
-            log.warn("Failed to save initial task log for taskId={}, configId={}", taskId, configId);
-            // 继续执行，不因日志保存失败而阻止任务触发
+            log.warn("Failed to save initial task log for configId={}", config.getConfigId());
+        }
+
+        try {
+            // 调用 EagleEye 爬虫服务
+            EagleEyeCrawlerService.CrawlResult result = eagleEyeCrawlerService.crawl(
+                    sourceName, listUrl, 3 // 默认爬取3篇
+            );
+
+            // 更新任务日志
+            taskLog.setEndTime(LocalDateTime.now());
+            if (result.getSuccess()) {
+                taskLog.setStatus("success");
+                taskLog.setBatchPath(result.getBatchPath());
+                taskLog.setArticleCount(result.getArticleCount());
+                taskLog.setCategoryStats(result.getCategoryStats());
+
+                // 更新配置的 result_path
+                config.setResultPath(result.getBatchPath());
+                config.setUpdateTime(LocalDateTime.now());
+                this.updateById(config);
+
+                log.info("EagleEye 爬虫执行成功: configId={}, batchPath={}", config.getConfigId(), result.getBatchPath());
+            } else {
+                taskLog.setStatus("failure");
+                taskLog.setErrorMessage(result.getErrorMessage());
+                log.warn("EagleEye 爬虫执行失败: configId={}, error={}", config.getConfigId(), result.getErrorMessage());
+            }
+
+            // 更新任务日志
+            crawlerTaskLogService.updateTaskLog(taskLog);
+            return result.getSuccess();
+
+        } catch (Exception e) {
+            log.error("EagleEye 爬虫服务调用失败: configId={}", config.getConfigId(), e);
+            taskLog.setEndTime(LocalDateTime.now());
+            taskLog.setStatus("failure");
+            taskLog.setErrorMessage("服务调用失败: " + e.getMessage());
+            crawlerTaskLogService.updateTaskLog(taskLog);
+            return false;
+        }
+    }
+
+    /**
+     * 使用旧的 RabbitMQ 方式触发爬虫
+     */
+    private boolean triggerLegacyCrawler(CrawlerConfig config) {
+        log.info("触发传统爬虫服务: configId={}", config.getConfigId());
+
+        // 构造任务消息
+        Map<String, Object> taskMessage = new HashMap<>();
+        String taskId = UUID.randomUUID().toString(true);
+        taskMessage.put("task_id", taskId);
+        taskMessage.put("config_id", config.getConfigId());
+
+        // 处理 sourceUrls
+        List<String> urls = List.of();
+        if (StringUtils.hasText(config.getSourceUrls())) {
+            urls = Arrays.stream(config.getSourceUrls().split("\\r?\\n"))
+                    .map(String::trim)
+                    .filter(StringUtils::hasText)
+                    .collect(Collectors.toList());
+        }
+
+        if (urls.isEmpty()) {
+            log.warn("Cannot trigger legacy crawler: configId={}, sourceUrls is empty.", config.getConfigId());
+            return false;
+        }
+
+        taskMessage.put("target_urls", urls);
+        taskMessage.put("trigger_type", "manual");
+        taskMessage.put("timestamp", LocalDateTime.now().toString());
+
+        // 记录任务日志
+        CrawlerTaskLog taskLog = new CrawlerTaskLog();
+        taskLog.setTaskId(taskId);
+        taskLog.setConfigId(config.getConfigId());
+        taskLog.setTargetUrl(urls.get(0));
+        taskLog.setStartTime(LocalDateTime.now());
+        taskLog.setStatus("processing");
+
+        boolean logSaved = crawlerTaskLogService.saveTaskLog(taskLog);
+        if (!logSaved) {
+            log.warn("Failed to save initial task log for taskId={}", taskId);
         }
 
         // 发送消息到 RabbitMQ
         try {
             rabbitTemplate.convertAndSend(TASK_QUEUE_NAME, taskMessage);
-            log.info("Successfully sent trigger task for configId={} to queue={}", configId, TASK_QUEUE_NAME);
+            log.info("成功发送传统爬虫任务到队列: configId={}", config.getConfigId());
             return true;
         } catch (Exception e) {
-            log.error("Failed to send trigger task for configId={} to queue={}", configId, TASK_QUEUE_NAME, e);
-            
-            // 更新任务日志为失败状态
-            if (logSaved) { // 仅当初始日志记录成功时才尝试更新
+            log.error("发送传统爬虫任务失败: configId={}", config.getConfigId(), e);
+
+            if (logSaved) {
                 taskLog.setEndTime(LocalDateTime.now());
                 taskLog.setStatus("failure");
-                taskLog.setErrorMessage("Failed to send to MQ: " + e.getMessage());
-                // 调用更新方法，而不是插入方法
-                boolean updated = crawlerTaskLogService.updateTaskLog(taskLog);
-                if (!updated) {
-                     log.warn("Failed to update task log status to failure for taskId={}, configId={}", taskId, configId);
-                }
+                taskLog.setErrorMessage("发送到 MQ 失败: " + e.getMessage());
+                crawlerTaskLogService.updateTaskLog(taskLog);
             }
-            
+
             return false;
         }
     }
-} 
+
+    /**
+     * 使用 EagleEye 爬虫服务触发爬虫（异步，返回任务ID）
+     */
+    private TriggerResult triggerEagleEyeCrawlerAsync(CrawlerConfig config) {
+        log.info("异步触发 EagleEye 爬虫服务: configId={}, targetName={}", config.getConfigId(), config.getTargetName());
+
+        try {
+            // 调用异步爬虫服务，获取 CompletableFuture
+            java.util.concurrent.CompletableFuture<String> future = eagleEyeCrawlerService.triggerAsync(config.getConfigId(), 3);
+
+            // 立即获取 taskId（CompletableFuture 已完成，包含 taskId）
+            String taskId = future.get();
+
+            log.info("EagleEye 爬虫任务已提交: configId={}, taskId={}", config.getConfigId(), taskId);
+            return new TriggerResult(true, taskId, "任务已提交，正在后台执行");
+
+        } catch (Exception e) {
+            log.error("EagleEye 爬虫服务调用失败: configId={}", config.getConfigId(), e);
+            return new TriggerResult(false, null, "服务调用失败: " + e.getMessage());
+        }
+    }
+}

@@ -1,0 +1,47 @@
+{
+  "batchId": "20251228_113435_eastmoney_czzyh",
+  "sourceName": "eastmoney_czzyh",
+  "sourceUrl": "https://bank.eastmoney.com/a/czzyh.html",
+  "sourceDisplayName": "东方财富网 - 中资银行频道",
+  "crawlTime": "2025-12-28T11:34:35+08:00",
+  "articleCount": 3,
+  "statistics": {
+    "policy": 2,
+    "competitor": 1
+  },
+  "articles": [
+    {
+      "id": 1,
+      "title": "金融市场年度体检报告来了 央行披露三大领域压力测试结果",
+      "category": "policy",
+      "categoryName": "政策",
+      "url": "https://finance.eastmoney.com/a/202512273603610095.html",
+      "publishTime": "2025-12-28T00:39:00+08:00",
+      "author": "第一财经",
+      "tags": ["央行", "金融稳定", "压力测试", "银行业", "监管报告"],
+      "file": "01_政策_金融市场年度体检报告来了_央行披露三大领域压力测试结果.md"
+    },
+    {
+      "id": 2,
+      "title": "央行印发《人民币跨境支付系统业务规则》",
+      "category": "policy",
+      "categoryName": "政策",
+      "url": "https://finance.eastmoney.com/a/202512263603069964.html",
+      "publishTime": "2025-12-26T17:17:00+08:00",
+      "author": "界面新闻",
+      "tags": ["央行", "CIPS", "跨境支付", "人民币", "监管规则"],
+      "file": "02_政策_央行印发《人民币跨境支付系统业务规则》.md"
+    },
+    {
+      "id": 3,
+      "title": "银行"开门红"揽储手段利器 大额存单利率2.1% 居民存款"搬家"或持续",
+      "category": "competitor",
+      "categoryName": "竞品",
+      "url": "https://finance.eastmoney.com/a/202512243600767569.html",
+      "publishTime": "2025-12-24T16:50:00+08:00",
+      "author": "财联社",
+      "tags": ["银行", "大额存单", "利率", "揽储", "存款搬家"],
+      "file": "03_竞品_银行开门红揽储手段利器_大额存单利率2.1%.md"
+    }
+  ]
+}

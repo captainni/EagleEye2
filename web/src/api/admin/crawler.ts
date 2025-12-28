@@ -126,9 +126,33 @@ export async function updateCrawlerConfigStatus(configId: number, isActive: bool
 }
 
 // POST /v1/admin/crawler/configs/{configId}/trigger (Trigger manually)
-// Backend returns CommonResult<String> -> Promise<string> (or void)
-export async function triggerCrawlerConfig(configId: number): Promise<string> {
+// Backend returns CommonResult<TriggerResult> -> Promise<TriggerResult>
+export interface TriggerResult {
+  success: boolean;
+  taskId?: string;
+  message?: string;
+}
+
+export async function triggerCrawlerConfig(configId: number): Promise<TriggerResult> {
   return apiClient.post(`/v1/admin/crawler/configs/${configId}/trigger`);
+}
+
+// GET /v1/admin/crawler/tasks/{taskId}/status (Get task status)
+export interface TaskStatus {
+  taskId: string;
+  configId: number;
+  configName?: string;
+  status: string;  // 'processing', 'success', 'failure'
+  targetUrl?: string;
+  batchPath?: string;
+  articleCount?: number;
+  startTime?: string;
+  endTime?: string;
+  errorMessage?: string;
+}
+
+export async function getTaskStatus(taskId: string): Promise<TaskStatus> {
+  return apiClient.get(`/v1/admin/crawler/tasks/${taskId}/status`);
 }
 
 // --- Task Monitoring API ---

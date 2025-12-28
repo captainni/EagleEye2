@@ -44,6 +44,21 @@ public class CrawlerTaskLog implements Serializable {
     private String targetUrl;
 
     /**
+     * 批次文件夹路径 (如: crawl_files/20251228_100307_eastmoney_bank)
+     */
+    private String batchPath;
+
+    /**
+     * 本次爬取的文章数量
+     */
+    private Integer articleCount;
+
+    /**
+     * 分类统计 JSON (如: {"policy":2,"competitor":1})
+     */
+    private String categoryStats;
+
+    /**
      * 任务大致开始时间 (由消费者记录)
      */
     private LocalDateTime startTime;

@@ -11,8 +11,8 @@ public class CrawlerConfigQueryDTO {
     @ApiModelProperty(value = "目标名称关键词", example = "人民银行")
     private String keyword; // 可用于模糊搜索 targetName
 
-    @ApiModelProperty(value = "目标类型 (\'policy\', \'competitor\')", example = "policy")
-    private String targetType;
+    @ApiModelProperty(value = "爬虫服务类型 ('legacy'=旧服务, 'eagleeye'=新服务)", example = "eagleeye")
+    private String crawlerService;
 
     @ApiModelProperty(value = "是否启用 (true/false)", example = "true")
     private Boolean isActive;

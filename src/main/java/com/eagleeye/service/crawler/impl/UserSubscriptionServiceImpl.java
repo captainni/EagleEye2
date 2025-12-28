@@ -38,7 +38,7 @@ public class UserSubscriptionServiceImpl extends ServiceImpl<UserSourceSubscript
                 Wrappers.lambdaQuery(CrawlerConfig.class)
                         .eq(CrawlerConfig::getIsDeleted, false)
                         .eq(CrawlerConfig::getIsActive, true)
-                        .orderByAsc(CrawlerConfig::getTargetType) // 按类型排序
+                        .orderByAsc(CrawlerConfig::getCrawlerService) // 按服务类型排序
                         .orderByAsc(CrawlerConfig::getTargetName)  // 再按名称排序
         );
 
@@ -126,7 +126,7 @@ public class UserSubscriptionServiceImpl extends ServiceImpl<UserSourceSubscript
             CrawlerConfig config = configMap.get(sub.getConfigId());
             if (config != null) {
                 vo.setTargetName(config.getTargetName());
-                vo.setTargetType(config.getTargetType());
+                vo.setTargetType(config.getCrawlerService()); // 使用 crawler_service 替代 targetType
                 // 可以在这里添加更多需要的配置信息到VO
             } else {
                 // 处理配置信息找不到的情况（例如配置被物理删除了）

@@ -8,10 +8,13 @@
 import { computed } from 'vue';
 
 const props = defineProps<{
-  type: 'css' | 'llm' | 'none';
+  type: 'css' | 'llm' | 'none' | null;
 }>();
 
 const tagClass = computed(() => {
+  if (props.type === null) {
+    return 'bg-blue-100 text-blue-600';
+  }
   switch (props.type) {
     case 'css':
       return 'bg-green-100 text-green-600';
@@ -25,6 +28,9 @@ const tagClass = computed(() => {
 });
 
 const label = computed(() => {
+  if (props.type === null) {
+    return 'AI';
+  }
   switch (props.type) {
     case 'css':
       return 'CSS';

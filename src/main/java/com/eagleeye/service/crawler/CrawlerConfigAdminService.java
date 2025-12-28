@@ -62,4 +62,37 @@ public interface CrawlerConfigAdminService {
      * @return 是否成功触发 (不代表任务执行成功)
      */
     boolean triggerConfig(Long configId);
+
+    /**
+     * 触发结果
+     */
+    class TriggerResult {
+        private boolean success;
+        private String taskId;
+        private String message;
+
+        public TriggerResult() {}
+
+        public TriggerResult(boolean success, String taskId, String message) {
+            this.success = success;
+            this.taskId = taskId;
+            this.message = message;
+        }
+
+        public boolean isSuccess() { return success; }
+        public void setSuccess(boolean success) { this.success = success; }
+
+        public String getTaskId() { return taskId; }
+        public void setTaskId(String taskId) { this.taskId = taskId; }
+
+        public String getMessage() { return message; }
+        public void setMessage(String message) { this.message = message; }
+    }
+
+    /**
+     * 手动触发一次爬虫任务 (返回任务ID)
+     * @param configId 配置ID
+     * @return 触发结果 (包含 taskId)
+     */
+    TriggerResult triggerConfigWithTaskId(Long configId);
 } 

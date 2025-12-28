@@ -105,13 +105,19 @@ public class CrawlerConfigAdminController {
 
     @ApiOperation("手动触发一次爬虫任务")
     @PostMapping("/{configId}/trigger")
-    public CommonResult<String> triggerConfig(
+    public CommonResult<Object> triggerConfig(
             @ApiParam("配置ID") @PathVariable Long configId) {
-        boolean success = crawlerConfigAdminService.triggerConfig(configId);
-        if (success) {
-            return CommonResult.success("任务触发成功（已发送到队列）");
+        CrawlerConfigAdminService.TriggerResult result = crawlerConfigAdminService.triggerConfigWithTaskId(configId);
+        if (result.isSuccess()) {
+            if (result.getTaskId() != null) {
+                // EagleEye 爬虫，返回 taskId
+                return CommonResult.success(result, result.getMessage());
+            } else {
+                // 传统爬虫，无 taskId
+                return CommonResult.success(result, result.getMessage());
+            }
         } else {
-            return CommonResult.failed("任务触发失败（配置不存在、未激活或发送MQ失败）");
+            return CommonResult.failed(result.getMessage());
         }
     }
 } 
