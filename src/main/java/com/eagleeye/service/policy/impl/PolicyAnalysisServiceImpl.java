@@ -157,9 +157,8 @@ public class PolicyAnalysisServiceImpl implements PolicyAnalysisService {
             return policyPaths;
         }
 
-        // 读取文件内容并清理可能的格式问题
+        // 读取文件内容
         String metadataContent = Files.readString(metadataFile.toPath());
-        metadataContent = cleanJsonContent(metadataContent);
 
         JsonNode rootNode = objectMapper.readTree(metadataContent);
         JsonNode articlesNode = rootNode.get("articles");
@@ -173,11 +172,15 @@ public class PolicyAnalysisServiceImpl implements PolicyAnalysisService {
         for (JsonNode articleNode : articlesNode) {
             JsonNode categoryNode = articleNode.get("category");
             if (categoryNode != null && "policy".equals(categoryNode.asText())) {
-                JsonNode fileNode = articleNode.get("file");
-                if (fileNode != null) {
-                    // 拼接完整路径
-                    String fullPath = batchPath + fileNode.asText();
-                    policyPaths.add(fullPath);
+                JsonNode filenameNode = articleNode.get("filename");
+                if (filenameNode != null) {
+                    // filename 字段只包含文件名，直接拼接
+                    File file = new File(batchPath, filenameNode.asText());
+                    if (!file.exists()) {
+                        log.warn("文件不存在: {}", file.getAbsolutePath());
+                        continue;
+                    }
+                    policyPaths.add(file.getAbsolutePath());
                 }
             }
         }
