@@ -3,6 +3,13 @@ spring:
     active: dev
   application:
     name: eagleeye
+  task:
+    execution:
+      pool:
+        max-size: 16
+        queue-capacity: 100
+        keep-alive: 10s
+      thread-name-prefix: policy-analysis-
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/eagleeye?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai

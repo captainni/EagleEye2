@@ -17,6 +17,15 @@
         {{ importanceLabel }}
       </span>
 
+      <!-- 显示相关度（新增） -->
+      <span
+        v-if="policy.relevance"
+        class="px-2 py-0.5 text-xs font-medium rounded flex-shrink-0"
+        :class="relevanceClass"
+      >
+        相关度: {{ policy.relevance }}
+      </span>
+
       <!-- 显示政策类型 -->
       <template v-if="policy.policyType">
         <span class="px-2 py-0.5 text-xs font-medium rounded bg-purple-100 text-purple-600 flex-shrink-0">
@@ -105,6 +114,18 @@ const importanceClass = computed(() => {
     '低': 'bg-green-100 text-green-600'
     };
     return colorMap[props.policy.importance] || 'bg-gray-100 text-gray-600';
+});
+
+// 相关度样式（新增）
+const relevanceClass = computed(() => {
+  if (!props.policy.relevance) return '';
+
+  const colorMap: Record<string, string> = {
+    '高': 'bg-orange-100 text-orange-600',
+    '中': 'bg-blue-100 text-blue-600',
+    '低': 'bg-gray-100 text-gray-500'
+  };
+    return colorMap[props.policy.relevance] || 'bg-gray-100 text-gray-500';
 });
 
 const goToDetail = () => {

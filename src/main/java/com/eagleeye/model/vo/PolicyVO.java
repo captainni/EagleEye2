@@ -55,7 +55,13 @@ public class PolicyVO {
      */
     @ApiModelProperty(value = "重要程度")
     private String importance;
-    
+
+    /**
+     * 与产品的相关度：高、中、低
+     */
+    @ApiModelProperty(value = "与产品的相关度")
+    private String relevance;
+
     /**
      * 相关领域
      */

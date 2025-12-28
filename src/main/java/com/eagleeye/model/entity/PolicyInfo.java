@@ -55,7 +55,12 @@ public class PolicyInfo {
      * 重要程度：高、中、低
      */
     private String importance;
-    
+
+    /**
+     * 与产品的相关度：高、中、低
+     */
+    private String relevance;
+
     /**
      * 相关领域 (JSON格式存储)
      */

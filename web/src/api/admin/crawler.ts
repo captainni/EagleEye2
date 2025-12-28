@@ -9,7 +9,9 @@ import type {
   CrawlerTaskLog,
   UserSuggestion,
   TaskLogQueryParam,
-  SuggestionQueryParam
+  SuggestionQueryParam,
+  PolicyAnalysisTriggerResult,
+  AnalysisResult
 } from '@/types/admin/crawler';
 import { safeJSONStringify as _safeJSONStringify } from '@/utils/jsonUtils';
 
@@ -193,3 +195,17 @@ export async function rejectUserSuggestion(id: string, handlerId: number, remark
 }
 
 // Note: We removed toggleCrawlerConfig as the backend uses PATCH with isActive param now.
+
+// --- Policy Analysis API ---
+
+// POST /v1/admin/crawler/tasks/{taskId}/analyze-policies
+export async function triggerPolicyAnalysis(taskId: string): Promise<PolicyAnalysisTriggerResult> {
+  return apiClient.post(`/v1/admin/crawler/tasks/${taskId}/analyze-policies`);
+}
+
+// GET /v1/admin/crawler/tasks/{taskId}/status (复用现有接口，新增返回分析状态)
+export interface PolicyAnalysisTaskStatus extends TaskStatus {
+  analysisStatus?: 'pending' | 'analyzing' | 'completed' | 'failed';
+  analysisResult?: AnalysisResult;
+}
+

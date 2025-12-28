@@ -1,15 +1,18 @@
 com/eagleeye/service/policy/impl/PolicyServiceImpl$4.class
 com/eagleeye/controller/SettingsController.class
 com/eagleeye/config/JacksonConfig.class
+com/eagleeye/model/dto/AnalysisResult$Suggestion.class
 com/eagleeye/model/vo/AttachmentVO.class
 com/eagleeye/repository/CrawlerConfigRepository.class
 com/eagleeye/service/settings/impl/SettingsServiceImpl$1.class
 com/eagleeye/service/settings/impl/SettingsServiceImpl$4.class
+com/eagleeye/service/policy/PolicyAnalysisService$AnalysisSummary.class
 com/eagleeye/model/vo/PolicySuggestionVO.class
 com/eagleeye/model/vo/OperationResult.class
 com/eagleeye/controller/requirement/RequirementController.class
 com/eagleeye/model/dto/CrawlerConfigUpdateDTO.class
 com/eagleeye/model/vo/CrawlerTaskLogVO.class
+com/eagleeye/service/policy/PolicyAnalyzer$PolicyAnalysisRequest.class
 com/eagleeye/service/crawler/UserSubscriptionService.class
 com/eagleeye/service/policy/PolicyService.class
 com/eagleeye/model/vo/ApiResponseVO.class
@@ -26,6 +29,7 @@ com/eagleeye/service/crawler/EagleEyeCrawlerService$CrawlResult.class
 com/eagleeye/config/SecurityConfig.class
 com/eagleeye/model/vo/dashboard/CompetitorSummaryVO.class
 com/eagleeye/service/competitor/impl/CompetitorServiceImpl.class
+com/eagleeye/service/policy/PolicyAnalyzer.class
 com/eagleeye/model/dto/PushSettingsDTO.class
 com/eagleeye/repository/PolicyRepository.class
 com/eagleeye/model/vo/dashboard/DashboardStatsVO$RequirementStatVO.class
@@ -61,6 +65,8 @@ com/eagleeye/service/crawler/impl/CrawlerTaskLogServiceImpl.class
 com/eagleeye/model/entity/PolicySuggestion.class
 com/eagleeye/model/dto/TaskLogQueryDTO.class
 com/eagleeye/service/requirement/RequirementService.class
+com/eagleeye/service/policy/impl/PolicyAnalysisServiceImpl.class
+com/eagleeye/model/dto/AnalysisResult.class
 com/eagleeye/model/entity/CompetitorAnalysis.class
 com/eagleeye/common/api/ResultCode.class
 com/eagleeye/model/dto/CrawlerConfigCreateDTO.class
@@ -115,5 +121,6 @@ com/eagleeye/model/dto/RequirementUpdateDTO.class
 com/eagleeye/model/dto/RequirementCreateDTO.class
 com/eagleeye/common/api/CommonResult.class
 com/eagleeye/repository/UserSettingsRepository.class
+com/eagleeye/service/policy/PolicyAnalysisService.class
 com/eagleeye/config/CorsConfig.class
 com/eagleeye/repository/PolicyAnalysisRepository.class

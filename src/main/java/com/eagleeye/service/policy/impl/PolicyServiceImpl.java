@@ -228,10 +228,11 @@ public class PolicyServiceImpl implements PolicyService {
         analysisWrapper.last("LIMIT 1");
         PolicyAnalysis policyAnalysis = policyAnalysisRepository.selectOne(analysisWrapper);
         
-        // 设置摘要和关键条款
+        // 设置摘要、相关度和关键条款
         if (policyAnalysis != null) {
             policyVO.setSummary(policyAnalysis.getSummary());
-            
+            policyVO.setRelevance(policyAnalysis.getRelevance());  // 新增：设置相关度
+
             // 解析keyPoints JSON为List
             if (StringUtils.isNotBlank(policyAnalysis.getKeyPoints())) {
                 try {

@@ -79,6 +79,16 @@ public class CrawlerTaskLog implements Serializable {
     private String errorMessage;
 
     /**
+     * 分析状态 (pending, analyzing, completed, failed)
+     */
+    private String analysisStatus;
+
+    /**
+     * 分析结果 JSON (如: {"total":5,"success":3,"skipped":1,"failed":1})
+     */
+    private String analysisResult;
+
+    /**
      * 记录创建时间
      */
     private LocalDateTime createdAt;

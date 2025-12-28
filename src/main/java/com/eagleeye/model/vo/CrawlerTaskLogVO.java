@@ -45,4 +45,19 @@ public class CrawlerTaskLogVO {
     @ApiModelProperty("错误信息 (如果 status=failure)")
     private String errorMessage;
 
+    @ApiModelProperty("批次文件夹路径")
+    private String batchPath;
+
+    @ApiModelProperty("本次爬取的文章数量")
+    private Integer articleCount;
+
+    @ApiModelProperty("分类统计 JSON")
+    private String categoryStats;
+
+    @ApiModelProperty("分析状态 (pending, analyzing, completed, failed)")
+    private String analysisStatus;
+
+    @ApiModelProperty("分析结果 JSON")
+    private String analysisResult;
+
 } 

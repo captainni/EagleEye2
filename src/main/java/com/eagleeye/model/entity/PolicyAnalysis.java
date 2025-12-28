@@ -40,7 +40,12 @@ public class PolicyAnalysis {
      * 影响分析
      */
     private String impactAnalysis;
-    
+
+    /**
+     * 与产品的相关度：高、中、低
+     */
+    private String relevance;
+
     /**
      * 是否删除：0-未删除，1-已删除
      */

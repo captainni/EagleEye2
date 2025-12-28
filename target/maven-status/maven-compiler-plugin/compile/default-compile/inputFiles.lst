@@ -1,3 +1,4 @@
+/home/captain/projects/EagleEye2/src/main/java/com/eagleeye/service/policy/PolicyAnalyzer.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/vo/CompetitorSourceVO.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/repository/CrawlerTaskLogRepository.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/vo/CompetitorTagVO.java
@@ -5,6 +6,7 @@
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/dto/CrawlerConfigUpdateDTO.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/vo/CrawlerTaskLogVO.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/vo/dashboard/RequirementSummaryVO.java
+/home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/dto/AnalysisResult.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/controller/requirement/RequirementController.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/service/policy/impl/PolicyServiceImpl.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/dto/CompetitorQueryDTO.java
@@ -53,6 +55,7 @@
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/service/settings/SettingsService.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/entity/CrawlerTaskLog.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/repository/UserSourceSubscriptionRepository.java
+/home/captain/projects/EagleEye2/src/main/java/com/eagleeye/service/policy/PolicyAnalysisService.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/repository/PolicyAnalysisRepository.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/dto/CrawlerConfigQueryDTO.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/entity/PolicyAnalysis.java
@@ -89,6 +92,7 @@
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/dto/RequirementUpdateDTO.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/entity/User.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/service/crawler/EagleEyeCrawlerService.java
+/home/captain/projects/EagleEye2/src/main/java/com/eagleeye/service/policy/impl/PolicyAnalysisServiceImpl.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/common/api/ResultCode.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/repository/RequirementRepository.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/vo/PolicySuggestionVO.java

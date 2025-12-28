@@ -11,6 +11,7 @@ export interface PolicyVO {
   publishTime?: string;
   policyType?: string;
   importance?: string | number | { label?: string; color?: string };
+  relevance?: string;
   areas?: string[];
   summary?: string;
   keyPoints?: string[];

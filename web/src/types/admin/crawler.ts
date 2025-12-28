@@ -212,3 +212,36 @@ export interface SuggestionQueryParam {
   status?: string;
   type?: string;
 }
+
+// --- Policy Analysis API Types ---
+
+// 分析状态响应
+export interface PolicyAnalysisTriggerResult {
+  message: string;
+}
+
+// 分析结果统计
+export interface AnalysisResult {
+  total: number;
+  success: number;
+  skipped: number;
+  failed: number;
+}
+
+// 更新 CrawlerTaskLog 接口以包含分析相关字段
+export interface CrawlerTaskLogVO {
+  logId: number;
+  taskId: string;
+  configId: number;
+  configName?: string;
+  targetUrl: string;
+  batchPath?: string;
+  articleCount?: number;
+  categoryStats?: string;
+  startTime?: string;
+  endTime?: string;
+  status: 'success' | 'failure';
+  errorMessage?: string;
+  analysisStatus?: 'pending' | 'analyzing' | 'completed' | 'failed';
+  analysisResult?: string; // JSON string of AnalysisResult
+}

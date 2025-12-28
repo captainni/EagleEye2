@@ -7,12 +7,20 @@
         <span><i class="fas fa-landmark mr-1"></i> 来源：{{ policy.source || '未知' }}</span>
         <span><i class="fas fa-calendar-alt mr-1"></i> 发布日期：{{ policy.publishTime || '未知' }}</span>
         <!-- 显示重要性 -->
-        <span 
+        <span
           v-if="policy.importance"
           class="px-2 py-0.5 text-xs font-medium rounded-full"
           :class="importanceClass"
         >
           {{ importanceLabel }}
+        </span>
+        <!-- 显示相关度（新增） -->
+        <span
+          v-if="policy.relevance"
+          class="px-2 py-0.5 text-xs font-medium rounded-full"
+          :class="relevanceClass"
+        >
+          相关度: {{ policy.relevance }}
         </span>
         <!-- 显示领域/标签 -->
         <template v-if="policy.areas && policy.areas.length">
@@ -136,6 +144,24 @@ const importanceClass = computed(() => {
     return 'bg-green-100 text-green-600';
   } else {
     return 'bg-gray-100 text-gray-600';
+  }
+});
+
+// 相关度样式（新增）
+const relevanceClass = computed(() => {
+  const relevance = props.policy.relevance;
+  if (!relevance) return 'bg-gray-100 text-gray-500';
+
+  const value = String(relevance).toLowerCase();
+
+  if (value === '高' || value === 'high') {
+    return 'bg-orange-100 text-orange-600';
+  } else if (value === '中' || value === 'medium') {
+    return 'bg-blue-100 text-blue-600';
+  } else if (value === '低' || value === 'low') {
+    return 'bg-gray-100 text-gray-500';
+  } else {
+    return 'bg-gray-100 text-gray-500';
   }
 });
 
