@@ -96,8 +96,10 @@
 
 <script lang="ts" setup>
 import { defineProps, computed } from 'vue';
-import { PolicyVO, SuggestionVO } from '@/api/policy'; // 导入统一的 PolicyVO 和 SuggestionVO
+import { PolicyVO, SuggestionVO } from '@/api/policy';
 import MarkdownIt from 'markdown-it';
+import { convertPolicyToRequirement } from '@/services/requirementService';
+import { ElMessage } from 'element-plus';
 
 // 创建 markdown-it 实例
 const md = new MarkdownIt({
@@ -208,9 +210,18 @@ const highlightedContent = computed(() => {
   return htmlContent;
 });
 
-const convertToRequirement = () => {
-  // 这里应该是转为需求的逻辑，暂时使用alert模拟
-  alert('需求已成功转化！');
+const convertToRequirement = async () => {
+  if (!props.policy.id) {
+    ElMessage.error('无法获取政策ID');
+    return;
+  }
+  try {
+    await convertPolicyToRequirement(props.policy.id);
+    ElMessage.success('需求已成功转化！');
+  } catch (error: any) {
+    console.error('Error converting policy to requirement:', error);
+    ElMessage.error(error.response?.data?.message || '需求转化失败，请稍后重试');
+  }
 };
 </script>
 

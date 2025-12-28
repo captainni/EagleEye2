@@ -33,7 +33,7 @@ const activeTab = ref('config');
 const activeMenu = '/admin/crawler';
 const mockUser = ref({
   name: '管理员',
-  avatar: '',
+  avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
   notifications: 0,
 });
 
