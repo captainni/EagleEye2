@@ -26,6 +26,8 @@
       :loading="loading"
       :analyzingTaskIds="analyzingTaskIds"
       @analyze="handleAnalyze"
+      @policyAnalyze="handlePolicyAnalyze"
+      @competitorAnalyze="handleCompetitorAnalyze"
       @viewResult="handleViewResult"
     />
 
@@ -50,7 +52,7 @@
 import { ref, onMounted, reactive, computed } from 'vue';
 import TaskTable from '@/components/admin/crawler/TaskTable.vue';
 import type { CrawlerTaskLog, TaskLogQueryParam, CrawlerTaskLogVO } from '@/types/admin/crawler';
-import { getCrawlerTaskLogs, triggerPolicyAnalysis, getTaskStatus } from '@/api/admin/crawler';
+import { getCrawlerTaskLogs, triggerPolicyAnalysis, triggerCompetitorAnalysis, getTaskStatus } from '@/api/admin/crawler';
 import { ElMessage } from 'element-plus';
 
 const loading = ref(false);
@@ -133,8 +135,13 @@ const handleCurrentChange = (val: number) => {
   fetchTasks();
 };
 
-// 处理分析按钮点击
+// 处理分析按钮点击（兼容旧版）
 const handleAnalyze = async (taskId: string) => {
+  await handlePolicyAnalyze(taskId);
+};
+
+// 处理政策分析按钮点击
+const handlePolicyAnalyze = async (taskId: string) => {
   try {
     ElMessage.info('正在启动政策分析...');
     await triggerPolicyAnalysis(taskId);
@@ -142,12 +149,31 @@ const handleAnalyze = async (taskId: string) => {
     // 添加到正在分析列表
     analyzingTaskIds.value = [...analyzingTaskIds.value, taskId];
 
-    ElMessage.success('分析任务已启动');
+    ElMessage.success('政策分析任务已启动');
 
     // 开始轮询任务状态
     startPollingStatus(taskId);
   } catch (error: any) {
     console.error('Failed to trigger policy analysis:', error);
+    ElMessage.error(error?.message || error?.msg || '启动分析失败');
+  }
+};
+
+// 处理竞品分析按钮点击
+const handleCompetitorAnalyze = async (taskId: string) => {
+  try {
+    ElMessage.info('正在启动竞品分析...');
+    await triggerCompetitorAnalysis(taskId);
+
+    // 添加到正在分析列表
+    analyzingTaskIds.value = [...analyzingTaskIds.value, taskId];
+
+    ElMessage.success('竞品分析任务已启动');
+
+    // 开始轮询任务状态
+    startPollingStatus(taskId);
+  } catch (error: any) {
+    console.error('Failed to trigger competitor analysis:', error);
     ElMessage.error(error?.message || error?.msg || '启动分析失败');
   }
 };

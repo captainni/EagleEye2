@@ -7,6 +7,7 @@ import com.eagleeye.model.dto.TaskLogQueryDTO;
 import com.eagleeye.model.vo.CrawlerTaskLogVO;
 import com.eagleeye.service.crawler.CrawlerTaskLogService;
 import com.eagleeye.service.policy.PolicyAnalysisService;
+import com.eagleeye.service.competitor.CompetitorAnalysisService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -38,6 +39,9 @@ public class CrawlerTaskLogController {
 
     @Resource
     private PolicyAnalysisService policyAnalysisService;
+
+    @Resource
+    private CompetitorAnalysisService competitorAnalysisService;
 
     @ApiOperation("分页查询爬虫任务日志")
     @GetMapping
@@ -132,10 +136,10 @@ public class CrawlerTaskLogController {
                 return CommonResult.failed("任务正在分析中");
             }
 
-            // 获取当前用户ID（新增）
+            // 获取当前用户ID
             Long userId = getCurrentUserId();
 
-            // 异步触发分析（传递 userId）
+            // 异步触发分析
             policyAnalysisService.analyzePoliciesAsync(taskLog.getLogId(), userId);
 
             log.info("政策分析任务已触发: taskId={}, userId={}", taskId, userId);
@@ -144,6 +148,48 @@ public class CrawlerTaskLogController {
         } catch (Exception e) {
             log.error("触发政策分析失败: taskId={}", taskId, e);
             return CommonResult.failed("触发政策分析失败: " + e.getMessage());
+        }
+    }
+
+    @ApiOperation("触发竞品文章分析入库")
+    @PostMapping("/{taskId}/analyze-competitors")
+    public CommonResult<String> triggerCompetitorAnalysis(
+            @ApiParam("任务ID") @PathVariable String taskId) {
+
+        try {
+            log.info("接收到竞品分析请求: taskId={}", taskId);
+
+            // 通过 taskId 查找 logId
+            CrawlerTaskLogVO taskLog = crawlerTaskLogService.getByTaskId(taskId);
+            if (taskLog == null) {
+                log.warn("任务不存在: taskId={}", taskId);
+                return CommonResult.failed("任务不存在: taskId=" + taskId);
+            }
+
+            // 检查任务状态，只有成功的任务才能分析
+            if (!"success".equals(taskLog.getStatus())) {
+                log.warn("任务状态不是成功，无法分析: taskId={}, status={}", taskId, taskLog.getStatus());
+                return CommonResult.failed("任务状态不是成功，无法分析: status=" + taskLog.getStatus());
+            }
+
+            // 检查是否已经在分析中
+            if ("analyzing".equals(taskLog.getAnalysisStatus())) {
+                log.warn("任务正在分析中: taskId={}", taskId);
+                return CommonResult.failed("任务正在分析中");
+            }
+
+            // 获取当前用户ID
+            Long userId = getCurrentUserId();
+
+            // 异步触发竞品分析
+            competitorAnalysisService.analyzeCompetitorsAsync(taskLog.getLogId(), userId);
+
+            log.info("竞品分析任务已触发: taskId={}, userId={}", taskId, userId);
+            return CommonResult.success("竞品分析任务已启动");
+
+        } catch (Exception e) {
+            log.error("触发竞品分析失败: taskId={}", taskId, e);
+            return CommonResult.failed("触发竞品分析失败: " + e.getMessage());
         }
     }
 

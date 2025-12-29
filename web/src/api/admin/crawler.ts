@@ -203,6 +203,11 @@ export async function triggerPolicyAnalysis(taskId: string): Promise<PolicyAnaly
   return apiClient.post(`/v1/admin/crawler/tasks/${taskId}/analyze-policies`);
 }
 
+// POST /v1/admin/crawler/tasks/{taskId}/analyze-competitors
+export async function triggerCompetitorAnalysis(taskId: string): Promise<PolicyAnalysisTriggerResult> {
+  return apiClient.post(`/v1/admin/crawler/tasks/${taskId}/analyze-competitors`);
+}
+
 // GET /v1/admin/crawler/tasks/{taskId}/status (复用现有接口，新增返回分析状态)
 export interface PolicyAnalysisTaskStatus extends TaskStatus {
   analysisStatus?: 'pending' | 'analyzing' | 'completed' | 'failed';

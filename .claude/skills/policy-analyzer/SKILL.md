@@ -6,19 +6,19 @@ description: 政策文章分析 AI 工具。读取政策文章 Markdown 内容�
 # Policy Analyzer Skill
 
 ## 功能
-分析政策文章，提取关键信息用于入库和高亮显示。支持根据用户产品信息评估政策与产品的相关度。
+分析金融政策文章，提取关键信息用于入库和高亮显示。支持根据用户产品信息评估政策与产品的相关度。
 
 ## 使用方法
-当用户需要对政策文章进行深度分析时，提供文章的 Markdown 内容。如果需要评估相关度，可同时提供用户产品信息。
+用户提供政策文章的 Markdown 内容，即可进行深度分析。如需评估相关度，可同时提供用户产品信息。
 
 ## 输出格式
-JSON 格式的分析结果，包含 policyType、importance、relevance、areas、summary、keyPoints、impactAnalysis、suggestions。
+JSON 格式，包含：`policyType`、`importance`、`relevance`、`areas`、`summary`、`keyPoints`、`impactAnalysis`、`suggestions`
 
 ## 输入参数
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `markdownContent` | string | 是 | 政策文章的完整 Markdown 内容 |
-| `products` | string | 否 | 用户产品列表的 JSON 字符串（可选，用于评估相关度） |
+| `products` | string | 否 | 用户产品列表的 JSON 字符串（用于评估相关度） |
 
 ## 输出示例
 ```json
@@ -38,18 +38,12 @@ JSON 格式的分析结果，包含 policyType、importance、relevance、areas�
     {
       "suggestion": "完善数据分类分级标准和管理制度",
       "reason": "满足监管合规要求，夯实数据安全管理基础"
-    },
-    {
-      "suggestion": "增加数据安全技术投入",
-      "reason": "加强技术手段建设，有效防范数据泄露风险"
     }
   ]
 }
 ```
 
-## 字段说明
+## 详细分析标准
 
-### importance vs relevance
-- **importance**（重要程度）：政策本身的重要程度，基于监管层级、强制性要求等客观因素
-- **relevance**（相关度）：政策与用户产品的相关程度，基于产品类型、功能特征与政策的匹配度
+完整的分析标准、判定规则和注意事项请参见 [REFERENCE.md](./REFERENCE.md)。
 

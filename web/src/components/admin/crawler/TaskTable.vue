@@ -72,34 +72,72 @@
          </template>
       </el-table-column>
 
-      <el-table-column label="操作" width="120" fixed="right">
+      <el-table-column prop="categoryStats" label="分类统计" width="150">
+        <template #default="{ row }">
+          <el-tooltip v-if="row.categoryStats" :content="getCategoryStatsTooltip(row.categoryStats)" placement="top">
+            <span class="text-xs">
+              <el-tag size="small" type="info" class="mr-1">政策: {{ getCategoryCount(row.categoryStats, 'policy') }}</el-tag>
+              <el-tag size="small" type="warning">竞品: {{ getCategoryCount(row.categoryStats, 'competitor') }}</el-tag>
+            </span>
+          </el-tooltip>
+          <span v-else>-</span>
+        </template>
+      </el-table-column>
+
+      <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
           <div class="space-x-1 whitespace-nowrap">
-            <!-- 只对成功且有 batchPath 的任务显示分析按钮 -->
+            <!-- 政策分析按钮 -->
             <el-tooltip
-              v-if="canAnalyze(row)"
-              :content="getAnalyzeButtonTooltip(row)"
+              v-if="canAnalyze(row) && hasPolicyArticles(row)"
+              :content="getPolicyAnalyzeButtonTooltip(row)"
               placement="top"
             >
-              <!-- 分析中状态：显示文字按钮 -->
               <el-button
                 v-if="isAnalyzing(row.taskId) || row.analysisStatus === 'analyzing'"
                 disabled
                 loading
                 size="small"
+                type="primary"
                 class="text-xs"
               >
-                分析中...
+                政策分析中...
               </el-button>
-              <!-- 正常状态：显示图标按钮 -->
               <el-button
                 v-else
                 link
-                :type="getAnalyzeButtonType(row)"
-                @click="handleAnalyze(row)"
+                type="primary"
+                @click="handlePolicyAnalyze(row)"
                 class="p-1 text-xs"
               >
-                <i :class="getAnalyzeButtonIcon(row)" class="analyze-icon"></i>
+                <i class="fas fa-brain"></i> 政策分析
+              </el-button>
+            </el-tooltip>
+
+            <!-- 竞品分析按钮 -->
+            <el-tooltip
+              v-if="canAnalyze(row) && hasCompetitorArticles(row)"
+              :content="getCompetitorAnalyzeButtonTooltip(row)"
+              placement="top"
+            >
+              <el-button
+                v-if="isAnalyzing(row.taskId) || row.analysisStatus === 'analyzing'"
+                disabled
+                loading
+                size="small"
+                type="success"
+                class="text-xs"
+              >
+                竞品分析中...
+              </el-button>
+              <el-button
+                v-else
+                link
+                type="success"
+                @click="handleCompetitorAnalyze(row)"
+                class="p-1 text-xs"
+              >
+                <i class="fas fa-chart-line"></i> 竞品分析
               </el-button>
             </el-tooltip>
 
@@ -109,7 +147,7 @@
               content="查看分析结果"
               placement="top"
             >
-              <el-button link type="success" @click="handleViewResult(row)" class="p-1 text-xs">
+              <el-button link type="info" @click="handleViewResult(row)" class="p-1 text-xs">
                 <i class="fas fa-chart-bar"></i>
               </el-button>
             </el-tooltip>
@@ -145,7 +183,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['analyze', 'viewResult']);
+const emit = defineEmits(['analyze', 'viewResult', 'policyAnalyze', 'competitorAnalyze']);
 
 // 判断是否可以分析
 const canAnalyze = (row: CrawlerTaskLogVO): boolean => {
@@ -212,9 +250,69 @@ const getAnalysisStatusText = (status: string | undefined): string => {
   }
 };
 
-// 处理分析按钮点击
+// 解析 categoryStats JSON
+const parseCategoryStats = (stats: string | undefined): Record<string, number> => {
+  if (!stats) return {};
+  try {
+    return JSON.parse(stats);
+  } catch {
+    return {};
+  }
+};
+
+// 判断是否有政策文章
+const hasPolicyArticles = (row: CrawlerTaskLogVO): boolean => {
+  const stats = parseCategoryStats(row.categoryStats);
+  return (stats.policy || 0) > 0;
+};
+
+// 判断是否有竞品文章
+const hasCompetitorArticles = (row: CrawlerTaskLogVO): boolean => {
+  const stats = parseCategoryStats(row.categoryStats);
+  return (stats.competitor || 0) > 0;
+};
+
+// 获取分类数量
+const getCategoryCount = (stats: string | undefined, category: string): number => {
+  const parsed = parseCategoryStats(stats);
+  return parsed[category] || 0;
+};
+
+// 获取分类统计 tooltip
+const getCategoryStatsTooltip = (stats: string | undefined): string => {
+  const parsed = parseCategoryStats(stats);
+  const policyCount = parsed.policy || 0;
+  const competitorCount = parsed.competitor || 0;
+  return `政策类: ${policyCount} 篇，竞品类: ${competitorCount} 篇`;
+};
+
+// 获取政策分析按钮提示
+const getPolicyAnalyzeButtonTooltip = (row: CrawlerTaskLogVO): string => {
+  if (isAnalyzing(row.taskId)) return '正在分析中...';
+  if (row.analysisStatus === 'completed') return '重新分析政策文章';
+  return '分析政策文章入库';
+};
+
+// 获取竞品分析按钮提示
+const getCompetitorAnalyzeButtonTooltip = (row: CrawlerTaskLogVO): string => {
+  if (isAnalyzing(row.taskId)) return '正在分析中...';
+  if (row.analysisStatus === 'completed') return '重新分析竞品文章';
+  return '分析竞品文章入库';
+};
+
+// 处理分析按钮点击（保留兼容）
 const handleAnalyze = (row: CrawlerTaskLogVO) => {
   emit('analyze', row.taskId);
+};
+
+// 处理政策分析按钮点击
+const handlePolicyAnalyze = (row: CrawlerTaskLogVO) => {
+  emit('policyAnalyze', row.taskId);
+};
+
+// 处理竞品分析按钮点击
+const handleCompetitorAnalyze = (row: CrawlerTaskLogVO) => {
+  emit('competitorAnalyze', row.taskId);
 };
 
 // 处理查看结果按钮点击

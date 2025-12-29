@@ -57,6 +57,11 @@ class AnalysisRequest(BaseModel):
     products: Optional[str] = None  # 用户产品列表的 JSON 字符串（可选）
 
 
+class CompetitorAnalysisRequest(BaseModel):
+    content: str  # 竞品文章的 Markdown 内容
+    userProducts: Optional[str] = None  # 用户产品列表的 JSON 字符串（可选）
+
+
 @app.get("/")
 async def root():
     return {"service": "EagleEye2 Proxy", "version": "1.0.0"}
@@ -189,6 +194,149 @@ async def analyze_policy(req: Request):
             except json.JSONDecodeError:
                 # 如果直接解析失败，尝试提取 JSON 部分
                 # Claude CLI 可能会在输出前后添加其他内容
+                start_idx = result_text.find("{")
+                end_idx = result_text.rfind("}") + 1
+                if start_idx >= 0 and end_idx > start_idx:
+                    json_str = result_text[start_idx:end_idx]
+                    result = json.loads(json_str)
+                    return JSONResponse(content=result)
+                else:
+                    # 无法解析为 JSON，返回原始文本
+                    return {"rawOutput": result_text}
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            elapsed = time.time() - start_time
+            claude_logger.error(f"任务异常: {str(e)}, 耗时={elapsed:.1f}s")
+            claude_logger.info("=" * 50)
+            raise HTTPException(status_code=500, detail=str(e))
+
+        finally:
+            # 确保进程被清理
+            if proc and proc.returncode is None:
+                try:
+                    proc.kill()
+                    await proc.wait()
+                except:
+                    pass
+
+    except Exception as e:
+        claude_logger.error(f"分析失败: {str(e)}")
+        claude_logger.info("=" * 50)
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
+@app.post("/analyze-competitor")
+async def analyze_competitor(req: Request):
+    """
+    调用 competitor-analyzer skill 分析竞品文章
+    """
+    claude_logger.info("=" * 50)
+    claude_logger.info("开始竞品分析任务")
+    proxy_logger.info("收到竞品分析请求")
+
+    try:
+        data = await req.json()
+        content = data.get("content")
+        user_products = data.get("userProducts")
+
+        if not content:
+            raise HTTPException(status_code=400, detail="Missing required field: content")
+
+        claude_logger.info(f"内容长度: {len(content)} 字符")
+        claude_logger.info(f"有产品信息: {'是' if user_products else '否'}")
+
+        # 构建产品上下文（如果有）
+        products_context = ""
+        if user_products:
+            products_context = f"""
+
+## 用户产品信息
+以下是用户的产品信息，请分析竞品动态与我方产品的相关度：
+{user_products}
+"""
+
+        # 构建完整的 prompt
+        prompt = f"""请使用 competitor-analyzer skill 分析以下竞品文章，并以 JSON 格式返回分析结果：
+{products_context}
+
+## 竞品文章内容
+{content}
+
+请确保返回结果包含以下字段：
+- company: 竞品公司/机构名称
+- type: 动态类型（产品更新/营销活动/财报数据/APP更新/利率调整/合作动态/政策响应）
+- importance: 重要程度（高|中|低）
+- relevance: 与我方产品的相关度（高|中|低）
+- tags: 相关标签数组
+- summary: 动态摘要
+- keyPoints: 关键要点数组（用于高亮显示，必须是原文语句）
+- marketImpact: 市场影响分析
+- competitiveAnalysis: 竞争态势分析
+- ourSuggestions: 建议数组，每条包含 suggestion 和 reason
+"""
+
+        proc = None
+        start_time = time.time()
+        try:
+            # 调用 Claude Code CLI
+            proc = await asyncio.create_subprocess_exec(
+                "claude",
+                "--dangerously-skip-permissions",
+                "-p", prompt,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd="/home/captain/projects/EagleEye2"
+            )
+
+            pid = proc.pid
+            claude_logger.info(f"启动 Claude Code CLI, PID={pid}")
+
+            # 等待进程完成，带超时控制
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    proc.communicate(),
+                    timeout=ANALYSIS_TIMEOUT
+                )
+            except asyncio.TimeoutError:
+                elapsed = time.time() - start_time
+                claude_logger.error(f"超时终止: PID={pid}, 已耗时={elapsed:.1f}s, 超时限制={ANALYSIS_TIMEOUT}s")
+                if proc:
+                    try:
+                        proc.kill()
+                        await proc.wait()
+                    except:
+                        pass
+                raise HTTPException(
+                    status_code=504,
+                    detail=f"Analysis timeout after {ANALYSIS_TIMEOUT} seconds"
+                )
+
+            # 检查返回码
+            elapsed = time.time() - start_time
+            if proc.returncode != 0:
+                error_msg = stderr.decode() if stderr else "Unknown error"
+                claude_logger.error(f"Claude Code CLI 执行失败: PID={pid}, 退出码={proc.returncode}, 耗时={elapsed:.1f}s")
+                claude_logger.error(f"错误信息: {error_msg}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Claude CLI error (exit code {proc.returncode}): {error_msg}"
+                )
+
+            claude_logger.info(f"Claude Code CLI 执行成功: PID={pid}, 退出码=0, 耗时={elapsed:.1f}s")
+
+            # 尝试解析返回结果为 JSON
+            result_text = stdout.decode().strip()
+            claude_logger.info(f"输出长度: {len(result_text)} 字符")
+            claude_logger.info("=" * 50)
+
+            try:
+                # 尝试直接解析
+                result = json.loads(result_text)
+                return JSONResponse(content=result)
+            except json.JSONDecodeError:
+                # 如果直接解析失败，尝试提取 JSON 部分
                 start_idx = result_text.find("{")
                 end_idx = result_text.rfind("}") + 1
                 if start_idx >= 0 and end_idx > start_idx:
