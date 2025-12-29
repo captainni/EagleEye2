@@ -18,7 +18,7 @@
       />
     </main>
     
-    <app-footer :copyright="'© 2024 金融资讯智能跟踪平台. All rights reserved.'" />
+    <app-footer :copyright="'© 2026 金融资讯智能跟踪平台. All rights reserved.'" />
   </div>
 </template>
 

@@ -20,7 +20,7 @@
       </div>
     </main>
 
-    <footer-comp :copyright="'© 2024 金融资讯智能跟踪平台. All rights reserved.'" />
+    <footer-comp :copyright="'© 2026 金融资讯智能跟踪平台. All rights reserved.'" />
   </div>
 </template>
 

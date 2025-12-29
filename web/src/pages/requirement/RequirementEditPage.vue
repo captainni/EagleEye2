@@ -29,7 +29,7 @@
       />
     </main>
     
-    <Footer copyright="© 2024 金融资讯智能跟踪平台. All rights reserved." />
+    <Footer copyright="© 2026 金融资讯智能跟踪平台. All rights reserved." />
   </div>
 </template>
 
