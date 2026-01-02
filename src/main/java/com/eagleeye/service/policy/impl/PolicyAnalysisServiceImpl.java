@@ -85,6 +85,19 @@ public class PolicyAnalysisServiceImpl implements PolicyAnalysisService {
         }
     }
 
+    @Async
+    @Override
+    public void reAnalyzePoliciesAsync(Long taskLogId, Long userId) {
+        log.info("异步重新分析政策文章: taskLogId={}, userId={}", taskLogId, userId);
+        try {
+            reAnalyzePolicies(taskLogId, userId);
+        } catch (Exception e) {
+            log.error("异步重新分析失败: taskLogId={}, userId={}", taskLogId, userId, e);
+            // 更新任务状态为失败
+            updateTaskLogStatus(taskLogId, "failed", null);
+        }
+    }
+
     @Override
     @Transactional
     public AnalysisSummary analyzePolicies(Long taskLogId, Long userId) {
@@ -141,6 +154,69 @@ public class PolicyAnalysisServiceImpl implements PolicyAnalysisService {
         updateTaskLogStatus(taskLogId, "completed", summary);
 
         log.info("政策分析完成: {}", summary);
+        return summary;
+    }
+
+    @Override
+    @Transactional
+    public AnalysisSummary reAnalyzePolicies(Long taskLogId, Long userId) {
+        log.info("开始重新分析政策文章: taskLogId={}, userId={}", taskLogId, userId);
+
+        // 1. 获取任务日志
+        CrawlerTaskLog taskLog = taskLogRepository.selectById(taskLogId);
+        if (taskLog == null) {
+            throw new RuntimeException("任务日志不存在: " + taskLogId);
+        }
+
+        String batchPath = taskLog.getBatchPath();
+        if (batchPath == null || batchPath.isEmpty()) {
+            throw new RuntimeException("批次路径为空: " + taskLogId);
+        }
+
+        // 如果是相对路径，转换为绝对路径
+        if (!batchPath.startsWith("/")) {
+            batchPath = crawlFilesBasePath + batchPath;
+        }
+        log.info("使用批次路径: {}", batchPath);
+
+        // 2. 更新任务状态为分析中
+        updateTaskLogStatus(taskLogId, "analyzing", null);
+
+        // 3. 读取 metadata.json
+        List<ArticleInfo> policyArticles;
+        try {
+            policyArticles = getPolicyArticles(batchPath);
+        } catch (IOException e) {
+            log.error("读取 metadata.json 失败: batchPath={}", batchPath, e);
+            throw new RuntimeException("读取批次文件失败: " + e.getMessage(), e);
+        }
+        log.info("找到 {} 篇政策文章", policyArticles.size());
+
+        // 4. 先删除该批次的所有旧分析记录
+        deleteOldPolicyAnalysis(batchPath);
+        log.info("已删除该批次的旧分析记录");
+
+        int total = policyArticles.size();
+        int success = 0;
+        int skipped = 0;
+        int failed = 0;
+
+        // 5. 逐个分析政策文章（重新分析，跳过去重检查）
+        for (ArticleInfo article : policyArticles) {
+            try {
+                processPolicyArticleReAnalyze(article.filePath, article.url, article.source, userId);
+                success++;
+            } catch (Exception e) {
+                log.error("分析政策文章失败: {}", article.filePath, e);
+                failed++;
+            }
+        }
+
+        // 6. 更新任务状态为完成
+        AnalysisSummary summary = new AnalysisSummary(total, success, skipped, failed);
+        updateTaskLogStatus(taskLogId, "completed", summary);
+
+        log.info("政策重新分析完成: {}", summary);
         return summary;
     }
 
@@ -362,6 +438,148 @@ public class PolicyAnalysisServiceImpl implements PolicyAnalysisService {
         }
 
         log.info("政策分析结果已保存: policyId={}", policyInfo.getId());
+    }
+
+    /**
+     * 删除指定批次的所有旧分析记录
+     * 根据批次路径中的文章 URL 查找并删除对应的政策分析记录
+     */
+    @Transactional
+    private void deleteOldPolicyAnalysis(String batchPath) {
+        try {
+            // 读取 metadata.json 获取所有文章的 URL
+            File metadataFile = new File(batchPath, "metadata.json");
+            if (!metadataFile.exists()) {
+                log.warn("metadata.json 不存在，无法删除旧记录: {}", metadataFile.getAbsolutePath());
+                return;
+            }
+
+            String metadataContent = Files.readString(metadataFile.toPath());
+            JsonNode rootNode = objectMapper.readTree(metadataContent);
+            JsonNode articlesNode = rootNode.get("articles");
+
+            if (articlesNode == null || !articlesNode.isArray()) {
+                return;
+            }
+
+            // 收集所有政策文章的 URL
+            List<String> policyUrls = new ArrayList<>();
+            for (JsonNode articleNode : articlesNode) {
+                JsonNode categoryNode = articleNode.get("category");
+                if (categoryNode != null && "policy".equals(categoryNode.asText())) {
+                    JsonNode urlNode = articleNode.get("url");
+                    if (urlNode != null) {
+                        policyUrls.add(urlNode.asText());
+                    }
+                }
+            }
+
+            // 根据 URL 删除对应的政策记录
+            for (String url : policyUrls) {
+                if (url != null && !url.isEmpty()) {
+                    // 查找 PolicyInfo
+                    LambdaQueryWrapper<PolicyInfo> policyWrapper = new LambdaQueryWrapper<>();
+                    policyWrapper.eq(PolicyInfo::getSourceUrl, url);
+                    PolicyInfo policyInfo = policyRepository.selectOne(policyWrapper);
+
+                    if (policyInfo != null) {
+                        // 删除 PolicySuggestion
+                        LambdaQueryWrapper<PolicySuggestion> suggestionWrapper = new LambdaQueryWrapper<>();
+                        suggestionWrapper.eq(PolicySuggestion::getPolicyId, policyInfo.getId());
+                        policySuggestionRepository.delete(suggestionWrapper);
+
+                        // 删除 PolicyAnalysis
+                        LambdaQueryWrapper<PolicyAnalysis> analysisWrapper = new LambdaQueryWrapper<>();
+                        analysisWrapper.eq(PolicyAnalysis::getPolicyId, policyInfo.getId());
+                        policyAnalysisRepository.delete(analysisWrapper);
+
+                        // 删除 PolicyInfo
+                        policyRepository.deleteById(policyInfo.getId());
+                        log.info("已删除旧政策记录: policyId={}, url={}", policyInfo.getId(), url);
+                    }
+                }
+            }
+
+            log.info("删除旧分析记录完成: batchPath={}, 共删除 {} 条", batchPath, policyUrls.size());
+        } catch (Exception e) {
+            log.error("删除旧分析记录失败: batchPath={}", batchPath, e);
+        }
+    }
+
+    /**
+     * 处理单篇政策文章（重新分析模式，跳过去重检查）
+     */
+    @Transactional
+    private void processPolicyArticleReAnalyze(String markdownPath, String sourceUrl, String source, Long userId) throws IOException {
+        log.debug("重新分析政策文章: {}", markdownPath);
+
+        // 1. 读取 Markdown 内容
+        String markdownContent = Files.readString(Paths.get(markdownPath));
+
+        // 2. 提取 sourceUrl（用于存储）
+        if (sourceUrl == null || sourceUrl.isEmpty()) {
+            sourceUrl = extractSourceUrl(markdownContent);
+        }
+
+        // 注意：重新分析模式，跳过去重检查，直接覆盖
+
+        // 3. 获取用户产品列表
+        String productsJson = null;
+        try {
+            SettingsDataVO settingsData = settingsService.getSettingsData(userId);
+            List<ProductVO> products = settingsData.getMyProducts();
+            if (products != null && !products.isEmpty()) {
+                List<Map<String, String>> productList = new ArrayList<>();
+                for (ProductVO product : products) {
+                    Map<String, String> productInfo = new HashMap<>();
+                    productInfo.put("name", product.getName());
+                    productInfo.put("type", product.getType());
+                    productInfo.put("features", product.getFeatures());
+                    productList.add(productInfo);
+                }
+                productsJson = objectMapper.writeValueAsString(productList);
+                log.debug("获取到 {} 个产品信息", products.size());
+            }
+        } catch (Exception e) {
+            log.warn("获取用户产品列表失败: userId={}", userId, e);
+        }
+
+        // 4. 调用 AI 分析
+        AnalysisResult result = policyAnalyzer.analyze(markdownContent, productsJson);
+
+        // 5. 删除旧记录并保存新结果
+        deletePolicyBySourceUrl(sourceUrl);
+        savePolicyAnalysisResult(markdownContent, sourceUrl, source, result);
+    }
+
+    /**
+     * 根据 sourceUrl 删除政策记录
+     */
+    @Transactional
+    private void deletePolicyBySourceUrl(String sourceUrl) {
+        if (sourceUrl == null || sourceUrl.isEmpty()) {
+            return;
+        }
+
+        LambdaQueryWrapper<PolicyInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PolicyInfo::getSourceUrl, sourceUrl);
+        PolicyInfo policyInfo = policyRepository.selectOne(wrapper);
+
+        if (policyInfo != null) {
+            // 删除 PolicySuggestion
+            LambdaQueryWrapper<PolicySuggestion> suggestionWrapper = new LambdaQueryWrapper<>();
+            suggestionWrapper.eq(PolicySuggestion::getPolicyId, policyInfo.getId());
+            policySuggestionRepository.delete(suggestionWrapper);
+
+            // 删除 PolicyAnalysis
+            LambdaQueryWrapper<PolicyAnalysis> analysisWrapper = new LambdaQueryWrapper<>();
+            analysisWrapper.eq(PolicyAnalysis::getPolicyId, policyInfo.getId());
+            policyAnalysisRepository.delete(analysisWrapper);
+
+            // 删除 PolicyInfo
+            policyRepository.deleteById(policyInfo.getId());
+            log.info("已删除旧政策记录: policyId={}, url={}", policyInfo.getId(), sourceUrl);
+        }
     }
 
     /**

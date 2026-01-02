@@ -48,6 +48,7 @@ com/eagleeye/service/settings/SettingsService.class
 com/eagleeye/service/dashboard/impl/DashboardServiceImpl.class
 com/eagleeye/service/crawler/EagleEyeCrawlerService$TriggerAsyncResult.class
 com/eagleeye/model/vo/CrawlerConfigVO.class
+com/eagleeye/util/CrawlerUtil.class
 com/eagleeye/model/entity/CrawlerConfig.class
 com/eagleeye/repository/CompetitorRepository.class
 com/eagleeye/model/entity/PolicyInfo.class

@@ -83,6 +83,19 @@ public class CompetitorAnalysisServiceImpl implements CompetitorAnalysisService 
         }
     }
 
+    @Async
+    @Override
+    public void reAnalyzeCompetitorsAsync(Long taskLogId, Long userId) {
+        log.info("异步重新分析竞品文章: taskLogId={}, userId={}", taskLogId, userId);
+        try {
+            reAnalyzeCompetitors(taskLogId, userId);
+        } catch (Exception e) {
+            log.error("异步重新分析失败: taskLogId={}, userId={}", taskLogId, userId, e);
+            // 更新任务状态为失败
+            updateTaskLogStatus(taskLogId, "failed", null);
+        }
+    }
+
     @Override
     @Transactional
     public AnalysisSummary analyzeCompetitors(Long taskLogId, Long userId) {
@@ -139,6 +152,69 @@ public class CompetitorAnalysisServiceImpl implements CompetitorAnalysisService 
         updateTaskLogStatus(taskLogId, "completed", summary);
 
         log.info("竞品分析完成: {}", summary);
+        return summary;
+    }
+
+    @Override
+    @Transactional
+    public AnalysisSummary reAnalyzeCompetitors(Long taskLogId, Long userId) {
+        log.info("开始重新分析竞品文章: taskLogId={}, userId={}", taskLogId, userId);
+
+        // 1. 获取任务日志
+        CrawlerTaskLog taskLog = taskLogRepository.selectById(taskLogId);
+        if (taskLog == null) {
+            throw new RuntimeException("任务日志不存在: " + taskLogId);
+        }
+
+        String batchPath = taskLog.getBatchPath();
+        if (batchPath == null || batchPath.isEmpty()) {
+            throw new RuntimeException("批次路径为空: " + taskLogId);
+        }
+
+        // 如果是相对路径，转换为绝对路径
+        if (!batchPath.startsWith("/")) {
+            batchPath = crawlFilesBasePath + batchPath;
+        }
+        log.info("使用批次路径: {}", batchPath);
+
+        // 2. 更新任务状态为分析中
+        updateTaskLogStatus(taskLogId, "analyzing", null);
+
+        // 3. 读取 metadata.json
+        List<ArticleInfo> competitorArticles;
+        try {
+            competitorArticles = getCompetitorArticles(batchPath);
+        } catch (IOException e) {
+            log.error("读取 metadata.json 失败: batchPath={}", batchPath, e);
+            throw new RuntimeException("读取批次文件失败: " + e.getMessage(), e);
+        }
+        log.info("找到 {} 篇竞品文章", competitorArticles.size());
+
+        // 4. 先删除该批次的所有旧分析记录
+        deleteOldCompetitorAnalysis(batchPath);
+        log.info("已删除该批次的旧分析记录");
+
+        int total = competitorArticles.size();
+        int success = 0;
+        int skipped = 0;
+        int failed = 0;
+
+        // 5. 逐个分析竞品文章（重新分析）
+        for (ArticleInfo article : competitorArticles) {
+            try {
+                processCompetitorArticle(article.filePath, article.url, article.source, userId);
+                success++;
+            } catch (Exception e) {
+                log.error("分析竞品文章失败: {}", article.filePath, e);
+                failed++;
+            }
+        }
+
+        // 6. 更新任务状态为完成
+        AnalysisSummary summary = new AnalysisSummary(total, success, skipped, failed);
+        updateTaskLogStatus(taskLogId, "completed", summary);
+
+        log.info("竞品重新分析完成: {}", summary);
         return summary;
     }
 
@@ -555,5 +631,73 @@ public class CompetitorAnalysisServiceImpl implements CompetitorAnalysisService 
         }
 
         taskLogRepository.updateById(taskLog);
+    }
+
+    /**
+     * 删除指定批次的所有旧竞品分析记录
+     * 根据批次路径中的文章 URL 查找并删除对应的竞品分析记录
+     */
+    @Transactional
+    private void deleteOldCompetitorAnalysis(String batchPath) {
+        try {
+            // 读取 metadata.json 获取所有文章的 URL
+            File metadataFile = new File(batchPath, "metadata.json");
+            if (!metadataFile.exists()) {
+                log.warn("metadata.json 不存在，无法删除旧记录: {}", metadataFile.getAbsolutePath());
+                return;
+            }
+
+            String metadataContent = Files.readString(metadataFile.toPath());
+            JsonNode rootNode = objectMapper.readTree(metadataContent);
+            JsonNode articlesNode = rootNode.get("articles");
+
+            if (articlesNode == null || !articlesNode.isArray()) {
+                return;
+            }
+
+            // 收集所有竞品文章的 URL
+            List<String> competitorUrls = new ArrayList<>();
+            for (JsonNode articleNode : articlesNode) {
+                JsonNode categoryNode = articleNode.get("category");
+                if (categoryNode != null && "competitor".equals(categoryNode.asText())) {
+                    JsonNode urlNode = articleNode.get("url");
+                    if (urlNode != null) {
+                        competitorUrls.add(urlNode.asText());
+                    }
+                }
+            }
+
+            // 根据 URL 删除对应的竞品记录
+            for (String url : competitorUrls) {
+                if (url != null && !url.isEmpty()) {
+                    // 查找 CompetitorInfo
+                    LambdaQueryWrapper<CompetitorInfo> competitorWrapper = new LambdaQueryWrapper<>();
+                    competitorWrapper.like(CompetitorInfo::getSources, "%" + url + "%");
+                    CompetitorInfo competitorInfo = competitorRepository.selectOne(competitorWrapper);
+
+                    if (competitorInfo != null) {
+                        Long competitorId = competitorInfo.getId();
+
+                        // 删除 CompetitorSource
+                        LambdaQueryWrapper<CompetitorSource> sourceWrapper = new LambdaQueryWrapper<>();
+                        sourceWrapper.eq(CompetitorSource::getCompetitorId, competitorId);
+                        competitorSourceRepository.delete(sourceWrapper);
+
+                        // 删除 CompetitorAnalysis
+                        LambdaQueryWrapper<CompetitorAnalysis> analysisWrapper = new LambdaQueryWrapper<>();
+                        analysisWrapper.eq(CompetitorAnalysis::getCompetitorId, competitorId);
+                        competitorAnalysisRepository.delete(analysisWrapper);
+
+                        // 删除 CompetitorInfo
+                        competitorRepository.deleteById(competitorId);
+                        log.info("已删除旧竞品记录: competitorId={}, url={}", competitorId, url);
+                    }
+                }
+            }
+
+            log.info("删除旧竞品分析记录完成: batchPath={}, 共删除 {} 条", batchPath, competitorUrls.size());
+        } catch (Exception e) {
+            log.error("删除旧竞品分析记录失败: batchPath={}", batchPath, e);
+        }
     }
 }

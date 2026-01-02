@@ -49,6 +49,7 @@ class CrawlRequest(BaseModel):
     listUrl: str
     sourceName: str
     maxArticles: int = 3
+    taskId: str = ""  # 任务ID（用于文件夹命名）
     useSkill: bool = False  # True = 用 Claude Code Skill, False = 用 MCP
 
 
@@ -412,7 +413,33 @@ async def analyze_competitor(req: Request):
 
 async def _crawl_with_skill(req: CrawlRequest):
     """使用 Claude Code CLI + Skill（使用 asyncio 正确管理进程）"""
-    prompt = f"使用 eagleeye-crawler skill 爬取 {req.listUrl} 的最新{req.maxArticles}篇文章，来源标识为 {req.sourceName}"
+    from datetime import datetime
+
+    # 生成时间戳和短 taskId
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    short_task_id = req.taskId[:8] if req.taskId and len(req.taskId) >= 8 else ""
+
+    # 构建具体文件夹名
+    if short_task_id:
+        target_folder = f"{timestamp}_{req.sourceName}_{short_task_id}"
+        prompt = f"""使用 eagleeye-crawler skill 爬取 {req.listUrl} 的最新{req.maxArticles}篇文章。
+
+**关键要求：必须使用这个文件夹名**
+文件夹名必须是：{target_folder}
+输出目录必须是：/home/captain/projects/EagleEye2/crawl_files/{target_folder}/
+
+来源标识：{req.sourceName}
+"""
+    else:
+        target_folder = f"{timestamp}_{req.sourceName}"
+        prompt = f"""使用 eagleeye-crawler skill 爬取 {req.listUrl} 的最新{req.maxArticles}篇文章。
+
+**关键要求：必须使用这个文件夹名**
+文件夹名必须是：{target_folder}
+输出目录必须是：/home/captain/projects/EagleEye2/crawl_files/{target_folder}/
+
+来源标识：{req.sourceName}
+"""
 
     claude_logger.info("=" * 50)
     claude_logger.info("开始爬虫任务")

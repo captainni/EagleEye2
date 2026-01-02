@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * 爬虫任务日志控制器
@@ -193,6 +195,171 @@ public class CrawlerTaskLogController {
         }
     }
 
+    @ApiOperation("智能分析 - 自动判断文章类型并调用对应的分析器（首次分析）")
+    @PostMapping("/{taskId}/analyze")
+    public CommonResult<String> analyzeTask(
+            @ApiParam("任务ID") @PathVariable String taskId) {
+
+        try {
+            log.info("接收到智能分析请求: taskId={}", taskId);
+
+            // 通过 taskId 查找 logId
+            CrawlerTaskLogVO taskLog = crawlerTaskLogService.getByTaskId(taskId);
+            if (taskLog == null) {
+                log.warn("任务不存在: taskId={}", taskId);
+                return CommonResult.failed("任务不存在: taskId=" + taskId);
+            }
+
+            // 检查任务状态，只有成功的任务才能分析
+            if (!"success".equals(taskLog.getStatus())) {
+                log.warn("任务状态不是成功，无法分析: taskId={}, status={}", taskId, taskLog.getStatus());
+                return CommonResult.failed("任务状态不是成功，无法分析: status=" + taskLog.getStatus());
+            }
+
+            // 检查是否已经在分析中
+            if ("analyzing".equals(taskLog.getAnalysisStatus())) {
+                log.warn("任务正在分析中: taskId={}", taskId);
+                return CommonResult.failed("任务正在分析中");
+            }
+
+            // 获取当前用户ID
+            Long userId = getCurrentUserId();
+
+            // 异步触发智能分析（同时调用政策和竞品分析）
+            policyAnalysisService.analyzePoliciesAsync(taskLog.getLogId(), userId);
+            competitorAnalysisService.analyzeCompetitorsAsync(taskLog.getLogId(), userId);
+
+            log.info("智能分析任务已触发: taskId={}, userId={}", taskId, userId);
+            return CommonResult.success("智能分析任务已启动");
+
+        } catch (Exception e) {
+            log.error("触发智能分析失败: taskId={}", taskId, e);
+            return CommonResult.failed("触发智能分析失败: " + e.getMessage());
+        }
+    }
+
+    @ApiOperation("再分析 - 删除旧记录后重新分析")
+    @PostMapping("/{taskId}/re-analyze")
+    public CommonResult<String> reAnalyzeTask(
+            @ApiParam("任务ID") @PathVariable String taskId) {
+
+        try {
+            log.info("接收到再分析请求: taskId={}", taskId);
+
+            // 通过 taskId 查找 logId
+            CrawlerTaskLogVO taskLog = crawlerTaskLogService.getByTaskId(taskId);
+            if (taskLog == null) {
+                log.warn("任务不存在: taskId={}", taskId);
+                return CommonResult.failed("任务不存在: taskId=" + taskId);
+            }
+
+            // 检查任务状态，只有成功的任务才能分析
+            if (!"success".equals(taskLog.getStatus())) {
+                log.warn("任务状态不是成功，无法分析: taskId={}, status={}", taskId, taskLog.getStatus());
+                return CommonResult.failed("任务状态不是成功，无法分析: status=" + taskLog.getStatus());
+            }
+
+            // 检查是否已经在分析中
+            if ("analyzing".equals(taskLog.getAnalysisStatus())) {
+                log.warn("任务正在分析中: taskId={}", taskId);
+                return CommonResult.failed("任务正在分析中");
+            }
+
+            // 获取当前用户ID
+            Long userId = getCurrentUserId();
+
+            // 异步触发再分析（删除旧记录后重新分析）
+            policyAnalysisService.reAnalyzePoliciesAsync(taskLog.getLogId(), userId);
+            competitorAnalysisService.reAnalyzeCompetitorsAsync(taskLog.getLogId(), userId);
+
+            log.info("再分析任务已触发: taskId={}, userId={}", taskId, userId);
+            return CommonResult.success("再分析任务已启动（将删除旧记录后重新分析）");
+
+        } catch (Exception e) {
+            log.error("触发再分析失败: taskId={}", taskId, e);
+            return CommonResult.failed("触发再分析失败: " + e.getMessage());
+        }
+    }
+
+    @ApiOperation("基于任务重新爬取（更新原任务）")
+    @PostMapping("/{taskId}/re-crawl")
+    public CommonResult<Map<String, String>> reCrawl(
+            @ApiParam("任务ID") @PathVariable String taskId) {
+
+        try {
+            log.info("接收到再爬取请求: taskId={}", taskId);
+
+            // 通过 taskId 查找任务日志
+            CrawlerTaskLogVO taskLog = crawlerTaskLogService.getByTaskId(taskId);
+            if (taskLog == null) {
+                log.warn("任务不存在: taskId={}", taskId);
+                return CommonResult.failed("任务不存在: taskId=" + taskId);
+            }
+
+            // 调用爬虫配置服务重新爬取（更新原任务）
+            com.eagleeye.service.crawler.CrawlerConfigAdminService crawlerConfigAdminService =
+                applicationContext.getBean(com.eagleeye.service.crawler.CrawlerConfigAdminService.class);
+            boolean success = crawlerConfigAdminService.reCrawlAndUpdateTask(taskLog.getLogId());
+
+            if (success) {
+                log.info("再爬取成功: taskId={}", taskId);
+
+                Map<String, String> result = new java.util.HashMap<>();
+                result.put("taskId", taskId);
+                result.put("message", "任务已重新爬取");
+                return CommonResult.success(result);
+            } else {
+                log.warn("再爬取失败: taskId={}", taskId);
+                return CommonResult.failed("再爬取失败");
+            }
+
+        } catch (Exception e) {
+            log.error("触发再爬取失败: taskId={}", taskId, e);
+            return CommonResult.failed("触发再爬取失败: " + e.getMessage());
+        }
+    }
+
+    @ApiOperation("获取任务的分析结果")
+    @GetMapping("/{taskId}/analysis-results")
+    public CommonResult<Map<String, Object>> getAnalysisResults(
+            @ApiParam("任务ID") @PathVariable String taskId) {
+
+        try {
+            log.info("接收到分析结果查询请求: taskId={}", taskId);
+
+            // 通过 taskId 查找任务日志
+            CrawlerTaskLogVO taskLog = crawlerTaskLogService.getByTaskId(taskId);
+            if (taskLog == null) {
+                log.warn("任务不存在: taskId={}", taskId);
+                return CommonResult.failed("任务不存在: taskId=" + taskId);
+            }
+
+            // 构建返回结果
+            Map<String, Object> results = new java.util.HashMap<>();
+            results.put("taskId", taskId);
+            results.put("analysisStatus", taskLog.getAnalysisStatus());
+            results.put("categoryStats", taskLog.getCategoryStats());
+
+            // 解析分析结果摘要
+            if ("completed".equals(taskLog.getAnalysisStatus()) && taskLog.getAnalysisResult() != null) {
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    com.fasterxml.jackson.databind.JsonNode resultNode = mapper.readTree(taskLog.getAnalysisResult());
+                    results.put("summary", resultNode);
+                } catch (Exception e) {
+                    log.warn("解析分析结果失败: taskId={}", taskId, e);
+                }
+            }
+
+            log.info("查询分析结果成功: taskId={}, status={}", taskId, taskLog.getAnalysisStatus());
+            return CommonResult.success(results);
+
+        } catch (Exception e) {
+            log.error("查询分析结果失败: taskId={}", taskId, e);
+            return CommonResult.failed("查询分析结果失败: " + e.getMessage());
+        }
+    }
+
     /**
      * 获取当前用户ID
      * TODO: 从认证上下文获取当前用户ID
@@ -203,4 +370,7 @@ public class CrawlerTaskLogController {
         // TODO: 从认证上下文获取当前用户ID
         return 1L; // 临时返回默认值
     }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.context.ApplicationContext applicationContext;
 } 

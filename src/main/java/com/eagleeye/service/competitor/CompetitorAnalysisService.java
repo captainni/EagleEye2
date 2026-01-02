@@ -16,6 +16,14 @@ public interface CompetitorAnalysisService {
     void analyzeCompetitorsAsync(Long taskLogId, Long userId);
 
     /**
+     * 异步重新分析指定批次中的竞品文章（删除旧记录后重新分析）
+     *
+     * @param taskLogId 爬虫任务日志ID
+     * @param userId 用户ID
+     */
+    void reAnalyzeCompetitorsAsync(Long taskLogId, Long userId);
+
+    /**
      * 分析指定批次中的竞品文章（同步）
      *
      * @param taskLogId 爬虫任务日志ID
@@ -23,6 +31,15 @@ public interface CompetitorAnalysisService {
      * @return 分析结果摘要
      */
     AnalysisSummary analyzeCompetitors(Long taskLogId, Long userId);
+
+    /**
+     * 重新分析指定批次中的竞品文章（删除旧记录后重新分析）
+     *
+     * @param taskLogId 爬虫任务日志ID
+     * @param userId 用户ID
+     * @return 分析结果摘要
+     */
+    AnalysisSummary reAnalyzeCompetitors(Long taskLogId, Long userId);
 
     /**
      * 分析结果统计

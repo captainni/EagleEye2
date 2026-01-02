@@ -25,10 +25,10 @@
       :tasks="tasks"
       :loading="loading"
       :analyzingTaskIds="analyzingTaskIds"
-      @analyze="handleAnalyze"
-      @policyAnalyze="handlePolicyAnalyze"
-      @competitorAnalyze="handleCompetitorAnalyze"
-      @viewResult="handleViewResult"
+      @smartAnalyze="handleSmartAnalyze"
+      @retry="handleRetry"
+      @reAnalyze="handleReAnalyze"
+      @reCrawl="handleReCrawl"
     />
 
      <!-- Pagination -->
@@ -52,7 +52,13 @@
 import { ref, onMounted, reactive, computed } from 'vue';
 import TaskTable from '@/components/admin/crawler/TaskTable.vue';
 import type { CrawlerTaskLog, TaskLogQueryParam, CrawlerTaskLogVO } from '@/types/admin/crawler';
-import { getCrawlerTaskLogs, triggerPolicyAnalysis, triggerCompetitorAnalysis, getTaskStatus } from '@/api/admin/crawler';
+import {
+  getCrawlerTaskLogs,
+  triggerSmartAnalyze,
+  triggerReAnalyze,
+  reCrawlTask,
+  getTaskStatus
+} from '@/api/admin/crawler';
 import { ElMessage } from 'element-plus';
 
 const loading = ref(false);
@@ -135,47 +141,91 @@ const handleCurrentChange = (val: number) => {
   fetchTasks();
 };
 
-// 处理分析按钮点击（兼容旧版）
+// ============ 新的处理方法 ============
+
+// 处理智能分析按钮点击
+const handleSmartAnalyze = async (taskId: string) => {
+  try {
+    ElMessage.info('正在启动智能分析...');
+    await triggerSmartAnalyze(taskId);
+
+    // 添加到正在分析列表
+    analyzingTaskIds.value = [...analyzingTaskIds.value, taskId];
+
+    ElMessage.success('智能分析任务已启动（系统将自动分析所有文章）');
+
+    // 开始轮询任务状态
+    startPollingStatus(taskId);
+  } catch (error: any) {
+    console.error('Failed to trigger smart analyze:', error);
+    ElMessage.error(error?.message || error?.msg || '启动分析失败');
+  }
+};
+
+// 处理再分析
+const handleReAnalyze = async (taskId: string) => {
+  try {
+    ElMessage.info('正在重新分析...');
+    await triggerReAnalyze(taskId);
+
+    // 添加到正在分析列表
+    analyzingTaskIds.value = [...analyzingTaskIds.value, taskId];
+
+    ElMessage.success('再分析任务已启动（将删除旧记录后重新分析）');
+
+    // 开始轮询任务状态
+    startPollingStatus(taskId);
+  } catch (error: any) {
+    console.error('Failed to trigger re-analyze:', error);
+    ElMessage.error(error?.message || error?.msg || '再分析失败');
+  }
+};
+
+// 处理重新执行（失败任务）
+const handleRetry = async (taskId: string) => {
+  try {
+    ElMessage.info('正在重新执行任务...');
+    await reCrawlTask(taskId);
+
+    ElMessage.success('任务已重新执行');
+    // 刷新列表
+    fetchTasks();
+  } catch (error: any) {
+    console.error('Failed to retry task:', error);
+    ElMessage.error(error?.message || error?.msg || '重新执行失败');
+  }
+};
+
+// 处理再爬取
+const handleReCrawl = async (taskId: string) => {
+  try {
+    ElMessage.info('正在重新爬取...');
+    await reCrawlTask(taskId);
+
+    ElMessage.success('任务已重新爬取');
+    // 刷新列表
+    fetchTasks();
+  } catch (error: any) {
+    console.error('Failed to re-crawl:', error);
+    ElMessage.error(error?.message || error?.msg || '再爬取失败');
+  }
+};
+
+// ============ 保留旧方法供兼容 ============
+
+// 处理分析按钮点击（兼容旧版，转发到智能分析）
 const handleAnalyze = async (taskId: string) => {
-  await handlePolicyAnalyze(taskId);
+  await handleSmartAnalyze(taskId);
 };
 
-// 处理政策分析按钮点击
+// 处理政策分析按钮点击（兼容旧版，转发到智能分析）
 const handlePolicyAnalyze = async (taskId: string) => {
-  try {
-    ElMessage.info('正在启动政策分析...');
-    await triggerPolicyAnalysis(taskId);
-
-    // 添加到正在分析列表
-    analyzingTaskIds.value = [...analyzingTaskIds.value, taskId];
-
-    ElMessage.success('政策分析任务已启动');
-
-    // 开始轮询任务状态
-    startPollingStatus(taskId);
-  } catch (error: any) {
-    console.error('Failed to trigger policy analysis:', error);
-    ElMessage.error(error?.message || error?.msg || '启动分析失败');
-  }
+  await handleSmartAnalyze(taskId);
 };
 
-// 处理竞品分析按钮点击
+// 处理竞品分析按钮点击（兼容旧版，转发到智能分析）
 const handleCompetitorAnalyze = async (taskId: string) => {
-  try {
-    ElMessage.info('正在启动竞品分析...');
-    await triggerCompetitorAnalysis(taskId);
-
-    // 添加到正在分析列表
-    analyzingTaskIds.value = [...analyzingTaskIds.value, taskId];
-
-    ElMessage.success('竞品分析任务已启动');
-
-    // 开始轮询任务状态
-    startPollingStatus(taskId);
-  } catch (error: any) {
-    console.error('Failed to trigger competitor analysis:', error);
-    ElMessage.error(error?.message || error?.msg || '启动分析失败');
-  }
+  await handleSmartAnalyze(taskId);
 };
 
 // 轮询任务状态
@@ -230,13 +280,6 @@ const startPollingStatus = (taskId: string) => {
       fetchTasks();
     }
   }, 3000); // 每 3 秒轮询一次
-};
-
-// 处理查看结果
-const handleViewResult = (task: CrawlerTaskLogVO) => {
-  // 可以在这里打开一个对话框显示详细的分析结果
-  console.log('View result for task:', task);
-  ElMessage.info('查看分析结果功能待实现');
 };
 
 // 测试API调用函数

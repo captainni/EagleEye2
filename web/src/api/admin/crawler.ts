@@ -214,3 +214,41 @@ export interface PolicyAnalysisTaskStatus extends TaskStatus {
   analysisResult?: string;  // JSON 字符串，需要 JSON.parse() 解析
 }
 
+// --- 新增：智能分析 API ---
+
+// POST /v1/admin/crawler/tasks/{taskId}/analyze
+// 智能分析 - 自动判断文章类型并调用对应的分析器（首次分析）
+export async function triggerSmartAnalyze(taskId: string): Promise<string> {
+  return apiClient.post(`/v1/admin/crawler/tasks/${taskId}/analyze`);
+}
+
+// POST /v1/admin/crawler/tasks/{taskId}/re-analyze
+// 再分析 - 删除旧记录后重新分析
+export async function triggerReAnalyze(taskId: string): Promise<string> {
+  return apiClient.post(`/v1/admin/crawler/tasks/${taskId}/re-analyze`);
+}
+
+// POST /v1/admin/crawler/tasks/{taskId}/re-crawl
+// 基于任务重新爬取（更新原任务）
+export interface ReCrawlResult {
+  taskId?: string;
+  message: string;
+}
+
+export async function reCrawlTask(taskId: string): Promise<ReCrawlResult> {
+  return apiClient.post(`/v1/admin/crawler/tasks/${taskId}/re-crawl`);
+}
+
+// GET /v1/admin/crawler/tasks/{taskId}/analysis-results
+// 获取任务的分析结果
+export interface AnalysisResultsData {
+  taskId: string;
+  analysisStatus: string;
+  categoryStats?: string;
+  summary?: any;  // JSON 对象，包含 total, success, skipped, failed
+}
+
+export async function getAnalysisResults(taskId: string): Promise<AnalysisResultsData> {
+  return apiClient.get(`/v1/admin/crawler/tasks/${taskId}/analysis-results`);
+}
+

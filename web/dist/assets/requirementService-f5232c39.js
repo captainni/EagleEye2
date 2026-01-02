@@ -1,1 +1,0 @@
-import{i as t}from"./axiosInstance-4195a5ae.js";const r="/v1/requirements",s=e=>t.get(r,{params:e}),i=e=>t.get(`${r}/${e}`),u=e=>t.post(r,e),c=(e,n)=>t.put(`${r}/${e}`,n),m=e=>t.delete(`${r}/${e}`),a=e=>t.post(`/v1/policies/${e}/to-requirement`),p=e=>t.post(`/v1/competitors/${e}/to-requirement`);export{p as a,u as b,a as c,m as d,i as g,s as l,c as u};

@@ -17,6 +17,14 @@ public interface PolicyAnalysisService {
     void analyzePoliciesAsync(Long taskLogId, Long userId);
 
     /**
+     * 异步重新分析指定批次中的政策文章（删除旧记录后重新分析）
+     *
+     * @param taskLogId 任务日志ID
+     * @param userId 用户ID（用于获取产品上下文）
+     */
+    void reAnalyzePoliciesAsync(Long taskLogId, Long userId);
+
+    /**
      * 分析指定批次中的政策文章（同步）
      *
      * @param taskLogId 任务日志ID
@@ -24,6 +32,15 @@ public interface PolicyAnalysisService {
      * @return 分析结果统计
      */
     AnalysisSummary analyzePolicies(Long taskLogId, Long userId);
+
+    /**
+     * 重新分析指定批次中的政策文章（删除旧记录后重新分析）
+     *
+     * @param taskLogId 任务日志ID
+     * @param userId 用户ID（用于获取产品上下文）
+     * @return 分析结果统计
+     */
+    AnalysisSummary reAnalyzePolicies(Long taskLogId, Long userId);
 
     /**
      * 分析结果统计

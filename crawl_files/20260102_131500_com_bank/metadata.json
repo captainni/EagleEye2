@@ -1,0 +1,40 @@
+{
+  "batchId": "20260102_131500_com_bank",
+  "source": "金融界",
+  "sourceUrl": "https://bank.jrj.com.cn/",
+  "sourceName": "com_bank",
+  "crawlTime": "2026-01-02T13:15:00",
+  "articleCount": 3,
+  "articles": [
+    {
+      "index": 1,
+      "title": "云南信托副总裁邓国山：慈善信托让善意走得更远",
+      "filename": "01_竞品_云南信托副总裁邓国山慈善信托让善意走得更远.md",
+      "url": "https://bank.jrj.com.cn/2025/12/31173354862733.shtml",
+      "category": "competitor",
+      "publishTime": "2025-12-31T17:33:00",
+      "author": "金融界",
+      "tags": ["信托", "慈善信托", "云南信托"]
+    },
+    {
+      "index": 2,
+      "title": "城商行三十年|达州银行：国资控股锚定新航向，金融活水赋能成渝双圈高质量发展",
+      "filename": "02_竞品_达州银行国资控股锚定新航向金融活水赋能成渝双圈高质量发展.md",
+      "url": "https://bank.jrj.com.cn/2025/12/31171854862291.shtml",
+      "category": "competitor",
+      "publishTime": "2025-12-31T17:18:00",
+      "author": "金融界",
+      "tags": ["达州银行", "城商行", "成渝双圈", "国资控股"]
+    },
+    {
+      "index": 3,
+      "title": "民生银行获评人民网'2025人民匠心品牌'",
+      "filename": "03_竞品_民生银行获评人民网2025人民匠心品牌.md",
+      "url": "https://bank.jrj.com.cn/2025/12/31165854861793.shtml",
+      "category": "competitor",
+      "publishTime": "2025-12-31T16:58:00",
+      "author": "山上",
+      "tags": ["民生银行", "匠心品牌", "人民网"]
+    }
+  ]
+}

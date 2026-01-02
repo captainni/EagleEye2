@@ -94,6 +94,7 @@
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/vo/ProductVO.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/entity/CompetitorTag.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/config/JacksonConfig.java
+/home/captain/projects/EagleEye2/src/main/java/com/eagleeye/util/CrawlerUtil.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/dto/RequirementUpdateDTO.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/model/entity/User.java
 /home/captain/projects/EagleEye2/src/main/java/com/eagleeye/service/crawler/EagleEyeCrawlerService.java

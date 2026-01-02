@@ -45,7 +45,12 @@ public class EagleEyeCrawlerServiceImpl implements EagleEyeCrawlerService {
 
     @Override
     public CrawlResult crawl(String sourceName, String listUrl, Integer maxArticles) {
-        logger.info("调用 EagleEye 爬虫服务: sourceName={}, listUrl={}, maxArticles={}", sourceName, listUrl, maxArticles);
+        return crawl(null, sourceName, listUrl, maxArticles);
+    }
+
+    @Override
+    public CrawlResult crawl(String taskId, String sourceName, String listUrl, Integer maxArticles) {
+        logger.info("调用 EagleEye 爬虫服务: taskId={}, sourceName={}, listUrl={}, maxArticles={}", taskId, sourceName, listUrl, maxArticles);
 
         try {
             // 构建请求体
@@ -53,6 +58,7 @@ public class EagleEyeCrawlerServiceImpl implements EagleEyeCrawlerService {
             requestBody.put("listUrl", listUrl);
             requestBody.put("sourceName", sourceName);
             requestBody.put("maxArticles", maxArticles != null ? maxArticles : 3);
+            requestBody.put("taskId", taskId != null ? taskId : "");
             requestBody.put("useSkill", true);
 
             // 设置请求头
@@ -193,8 +199,9 @@ public class EagleEyeCrawlerServiceImpl implements EagleEyeCrawlerService {
      * 从 URL 提取 sourceName
      * 例如: https://bank.eastmoney.com/a/czzyh.html -> eastmoney_czzyh
      * 例如: https://finance.eastmoney.com/a/20251226.html -> eastmoney_finance
+     * 例如: https://bank.jrj.com.cn/ -> jrj_bank
      */
-    private String extractSourceNameFromUrl(String url) {
+    public String extractSourceNameFromUrl(String url) {
         try {
             // 移除协议前缀
             String cleanUrl = url.replaceFirst("^https?://", "");

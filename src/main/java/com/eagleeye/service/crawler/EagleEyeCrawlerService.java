@@ -14,8 +14,20 @@ public interface EagleEyeCrawlerService {
      * @param listUrl 列表页面 URL
      * @param maxArticles 最大文章数
      * @return 爬取结果
+     * @deprecated 使用 crawl(String taskId, String sourceName, String listUrl, Integer maxArticles) 代替
      */
+    @Deprecated
     CrawlResult crawl(String sourceName, String listUrl, Integer maxArticles);
+
+    /**
+     * 执行爬虫任务（同步，带任务ID）
+     * @param taskId 任务ID
+     * @param sourceName 来源标识 (如: eastmoney_bank)
+     * @param listUrl 列表页面 URL
+     * @param maxArticles 最大文章数
+     * @return 爬取结果
+     */
+    CrawlResult crawl(String taskId, String sourceName, String listUrl, Integer maxArticles);
 
     /**
      * 异步触发爬虫任务

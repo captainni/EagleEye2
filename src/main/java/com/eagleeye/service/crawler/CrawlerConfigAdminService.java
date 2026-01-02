@@ -95,4 +95,11 @@ public interface CrawlerConfigAdminService {
      * @return 触发结果 (包含 taskId)
      */
     TriggerResult triggerConfigWithTaskId(Long configId);
+
+    /**
+     * 重新爬取并更新原任务（覆盖原任务数据）
+     * @param taskLogId 原任务日志ID
+     * @return 是否成功
+     */
+    boolean reCrawlAndUpdateTask(Long taskLogId);
 } 

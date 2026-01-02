@@ -14,9 +14,11 @@ import com.eagleeye.model.entity.CrawlerTaskLog;
 import com.eagleeye.model.vo.CrawlerConfigDetailVO;
 import com.eagleeye.model.vo.CrawlerConfigVO;
 import com.eagleeye.repository.CrawlerConfigRepository;
+import com.eagleeye.repository.CrawlerTaskLogRepository;
 import com.eagleeye.service.crawler.CrawlerConfigAdminService;
 import com.eagleeye.service.crawler.CrawlerTaskLogService;
 import com.eagleeye.service.crawler.EagleEyeCrawlerService;
+import com.eagleeye.util.CrawlerUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +45,9 @@ public class CrawlerConfigAdminServiceImpl extends ServiceImpl<CrawlerConfigRepo
 
     @Resource
     private CrawlerTaskLogService crawlerTaskLogService; // 添加任务日志服务
+
+    @Resource
+    private CrawlerTaskLogRepository crawlerTaskLogRepository; // 添加任务日志仓库
 
     @Resource
     private EagleEyeCrawlerService eagleEyeCrawlerService; // EagleEye 爬虫服务
@@ -106,6 +111,106 @@ public class CrawlerConfigAdminServiceImpl extends ServiceImpl<CrawlerConfigRepo
         configToUpdate.setUpdateTime(LocalDateTime.now());
         // 注意：BeanUtil.copyProperties 会覆盖所有字段，如果只想更新非null字段，需要额外处理或使用Mapstruct等
         return this.updateById(configToUpdate);
+    }
+
+    @Override
+    @Transactional
+    public boolean reCrawlAndUpdateTask(Long taskLogId) {
+        // 1. 获取原任务日志
+        CrawlerTaskLog taskLog = crawlerTaskLogRepository.selectById(taskLogId);
+        if (taskLog == null) {
+            log.warn("任务日志不存在: taskLogId={}", taskLogId);
+            return false;
+        }
+
+        Long configId = taskLog.getConfigId();
+        if (configId == null) {
+            log.warn("任务没有关联的配置ID: taskLogId={}", taskLogId);
+            return false;
+        }
+
+        // 2. 获取配置
+        CrawlerConfig config = this.getOne(Wrappers.lambdaQuery(CrawlerConfig.class)
+                .eq(CrawlerConfig::getConfigId, configId)
+                .eq(CrawlerConfig::getIsDeleted, false)
+                .eq(CrawlerConfig::getIsActive, true));
+
+        if (config == null) {
+            log.warn("配置不存在、已删除或未激活: configId={}", configId);
+            return false;
+        }
+
+        // 3. 检查是否使用 eagleeye 爬虫服务
+        if (!"eagleeye".equals(config.getCrawlerService())) {
+            log.warn("只支持 EagleEye 爬虫服务的再爬取: crawlerService={}", config.getCrawlerService());
+            return false;
+        }
+
+        // 4. 处理 sourceUrls
+        List<String> urls = List.of();
+        if (StringUtils.hasText(config.getSourceUrls())) {
+            urls = Arrays.stream(config.getSourceUrls().split("\\r?\\n"))
+                    .map(String::trim)
+                    .filter(StringUtils::hasText)
+                    .collect(Collectors.toList());
+        }
+
+        if (urls.isEmpty()) {
+            log.warn("配置的 sourceUrls 为空: configId={}", configId);
+            return false;
+        }
+
+        String listUrl = urls.get(0);
+
+        // 5. 更新原任务状态为处理中
+        taskLog.setStatus("processing");
+        taskLog.setStartTime(LocalDateTime.now());
+        taskLog.setEndTime(null);
+        taskLog.setErrorMessage(null);
+        taskLog.setAnalysisStatus("pending");  // 重置分析状态
+        taskLog.setAnalysisResult(null);       // 清空分析结果
+        crawlerTaskLogRepository.updateById(taskLog);
+
+        try {
+            // 6. 调用 EagleEye 爬虫服务
+            // 使用 CrawlerUtil.extractSourceNameFromUrl 从 URL 提取 sourceName
+            String sourceName = CrawlerUtil.extractSourceNameFromUrl(listUrl);
+            String taskId = taskLog.getTaskId(); // 使用任务ID
+            EagleEyeCrawlerService.CrawlResult result = eagleEyeCrawlerService.crawl(
+                    taskId, sourceName, listUrl, 3  // 传入 taskId
+            );
+
+            // 7. 更新原任务的爬取结果
+            taskLog.setEndTime(LocalDateTime.now());
+            if (result.getSuccess()) {
+                taskLog.setStatus("success");
+                taskLog.setBatchPath(result.getBatchPath());
+                taskLog.setArticleCount(result.getArticleCount());
+                taskLog.setCategoryStats(result.getCategoryStats());
+
+                // 更新配置的 result_path
+                config.setResultPath(result.getBatchPath());
+                config.setUpdateTime(LocalDateTime.now());
+                this.updateById(config);
+
+                log.info("再爬取成功: taskLogId={}, batchPath={}", taskLogId, result.getBatchPath());
+            } else {
+                taskLog.setStatus("failure");
+                taskLog.setErrorMessage(result.getErrorMessage());
+                log.warn("再爬取失败: taskLogId={}, error={}", taskLogId, result.getErrorMessage());
+            }
+
+            crawlerTaskLogRepository.updateById(taskLog);
+            return result.getSuccess();
+
+        } catch (Exception e) {
+            log.error("再爬取服务调用失败: taskLogId={}", taskLogId, e);
+            taskLog.setEndTime(LocalDateTime.now());
+            taskLog.setStatus("failure");
+            taskLog.setErrorMessage("服务调用失败: " + e.getMessage());
+            crawlerTaskLogRepository.updateById(taskLog);
+            return false;
+        }
     }
 
     @Override
