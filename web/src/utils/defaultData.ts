@@ -70,10 +70,10 @@ export const policyRelevanceOptions = [
 
 export const requirementStatusOptions = [
   { label: '全部状态', value: '' },
-  { label: '待处理', value: 'pending' },
-  { label: '进行中', value: 'in_progress' },
-  { label: '已完成', value: 'completed' },
-  { label: '已关闭', value: 'closed' }
+  { label: '待处理', value: 'NEW' },
+  { label: '进行中', value: 'PROCESSING' },
+  { label: '已完成', value: 'COMPLETED' },
+  { label: '已拒绝', value: 'REJECTED' }
 ];
 
 export const requirementPriorityOptions = [

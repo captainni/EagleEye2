@@ -1,21 +1,21 @@
 <template>
   <div>
     <NavBar :activeMenu="'/requirement-pool'" :user="userData" />
-    
+
     <main class="max-w-[1440px] mx-auto px-6 pt-24 pb-12">
       <!-- 筛选与操作区域 -->
-      <RequirementFilter @search="handleSearch" @reset="resetFilters" />
-      
+      <RequirementFilter :initial-filter="filters" @filter="handleFilter" />
+
       <!-- 需求列表区域 -->
-      <RequirementTable 
-        :requirements="requirements" 
+      <RequirementTable
+        :requirements="requirements"
         :loading="loading"
         @view="viewRequirement"
         @edit="editRequirement"
         @delete="handleDelete"
         @select="handleSelect"
       />
-      
+
       <!-- 分页控件 -->
       <div class="mt-8 flex justify-center">
         <el-pagination
@@ -28,13 +28,13 @@
         />
       </div>
     </main>
-    
+
     <Footer copyright="© 2026 金融资讯智能跟踪平台. All rights reserved." />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import NavBar from '@/components/common/NavBar.vue';
@@ -55,7 +55,7 @@ const pageSize = ref(10);
 const selectedIds = ref<number[]>([]);
 
 // 过滤条件
-const filters = ref<RequirementQueryDTO>({
+const filters = reactive({
   keyword: '',
   status: '',
   priority: '',
@@ -67,17 +67,24 @@ const fetchRequirements = async () => {
   loading.value = true;
   try {
     const params: RequirementQueryDTO = {
-      ...filters.value,
       pageNum: currentPage.value,
       pageSize: pageSize.value
     };
-    // 清理空字符串参数，避免传给后端
-    Object.keys(params).forEach(key => {
-      if (params[key as keyof RequirementQueryDTO] === '') {
-        delete params[key as keyof RequirementQueryDTO];
-      }
-    });
-    
+
+    // 添加筛选条件
+    if (filters.keyword) {
+      params.keyword = filters.keyword;
+    }
+    if (filters.status) {
+      params.status = filters.status;
+    }
+    if (filters.priority) {
+      params.priority = filters.priority;
+    }
+    if (filters.sourceType) {
+      params.sourceType = filters.sourceType;
+    }
+
     const response = await listRequirements(params);
     if (response.code === 200 && response.data) {
       requirements.value = response.data.list;
@@ -96,21 +103,9 @@ const fetchRequirements = async () => {
   }
 };
 
-// 处理搜索
-const handleSearch = (searchFilters: RequirementQueryDTO) => {
-  filters.value = { ...searchFilters };
-  currentPage.value = 1;
-  fetchRequirements();
-};
-
-// 重置过滤器
-const resetFilters = () => {
-  filters.value = {
-    keyword: '',
-    status: '',
-    priority: '',
-    sourceType: ''
-  };
+// 处理筛选
+const handleFilter = (newFilters: any) => {
+  Object.assign(filters, newFilters);
   currentPage.value = 1;
   fetchRequirements();
 };
@@ -148,7 +143,7 @@ const handleDelete = async (id: number) => {
         type: 'warning',
       }
     );
-    
+
     loading.value = true; // 开始删除操作，显示加载状态
     const response = await deleteRequirement(id);
     if (response.code === 200) {
@@ -169,9 +164,6 @@ const handleDelete = async (id: number) => {
       loading.value = false; // 结束删除操作，隐藏加载状态
   }
 };
-
-// 监听过滤条件和页码变化
-watch([filters, currentPage], fetchRequirements, { deep: true });
 
 // 组件挂载时获取初始数据
 onMounted(() => {
