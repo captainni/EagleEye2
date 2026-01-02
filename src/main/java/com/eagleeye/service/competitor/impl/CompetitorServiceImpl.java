@@ -117,24 +117,24 @@ public class CompetitorServiceImpl implements CompetitorService {
         if (competitorInfo == null) {
             return null;
         }
-        
+
         // 获取关联的分析建议
         LambdaQueryWrapper<CompetitorAnalysis> analysisWrapper = new LambdaQueryWrapper<>();
         analysisWrapper.eq(CompetitorAnalysis::getCompetitorId, id)
                 .orderByAsc(CompetitorAnalysis::getSortOrder);
         List<CompetitorAnalysis> analysisList = competitorAnalysisRepository.selectList(analysisWrapper);
-        
+
         // 获取关联的资源链接
         LambdaQueryWrapper<CompetitorSource> sourceWrapper = new LambdaQueryWrapper<>();
         sourceWrapper.eq(CompetitorSource::getCompetitorId, id)
                 .orderByAsc(CompetitorSource::getSortOrder);
         List<CompetitorSource> sourceList = competitorSourceRepository.selectList(sourceWrapper);
-        
+
         // 获取关联的标签
         LambdaQueryWrapper<CompetitorTag> tagWrapper = new LambdaQueryWrapper<>();
         tagWrapper.eq(CompetitorTag::getCompetitorId, id);
         List<CompetitorTag> tagList = competitorTagRepository.selectList(tagWrapper);
-        
+
         // 构建详情VO
         CompetitorDetailVO detailVO = new CompetitorDetailVO();
         detailVO.setId(competitorInfo.getId());
@@ -142,29 +142,80 @@ public class CompetitorServiceImpl implements CompetitorService {
         detailVO.setCompany(competitorInfo.getCompany());
         detailVO.setType(competitorInfo.getType());
         detailVO.setCaptureTime(competitorInfo.getCaptureTime());
-        
+
+        // 设置重要性和相关度
+        detailVO.setImportance(competitorInfo.getImportance());
+        detailVO.setRelevance(competitorInfo.getRelevance());
+
+        // 设置摘要和内容
+        detailVO.setSummary(competitorInfo.getSummary());
+        detailVO.setContent(competitorInfo.getContent());
+        detailVO.setRelatedInfo(competitorInfo.getRelatedInfo());
+
+        // 处理关键要点（从 CompetitorInfo 的 JSON 字段解析）
+        if (StringUtils.isNotBlank(competitorInfo.getKeyPoints())) {
+            try {
+                List<String> keyPoints = objectMapper.readValue(competitorInfo.getKeyPoints(),
+                        new TypeReference<List<String>>(){});
+                detailVO.setKeyPoints(keyPoints);
+            } catch (Exception e) {
+                log.error("解析 keyPoints 失败: {}", e.getMessage());
+                detailVO.setKeyPoints(new ArrayList<>());
+            }
+        } else {
+            detailVO.setKeyPoints(new ArrayList<>());
+        }
+
+        // 从 CompetitorAnalysis 中获取额外的分析信息
+        if (analysisList != null && !analysisList.isEmpty()) {
+            CompetitorAnalysis firstAnalysis = analysisList.get(0);
+
+            // 如果 CompetitorInfo 中没有这些字段，从 Analysis 中获取
+            if (StringUtils.isBlank(detailVO.getImportance())) {
+                detailVO.setImportance(firstAnalysis.getImportance());
+            }
+            if (StringUtils.isBlank(detailVO.getRelevance())) {
+                detailVO.setRelevance(firstAnalysis.getRelevance());
+            }
+
+            // 设置市场影响分析和竞争态势分析
+            detailVO.setMarketImpact(firstAnalysis.getMarketImpact());
+            detailVO.setCompetitiveAnalysis(firstAnalysis.getCompetitiveAnalysis());
+
+            // 如果 CompetitorInfo 中没有 keyPoints，从 Analysis 中获取
+            if ((detailVO.getKeyPoints() == null || detailVO.getKeyPoints().isEmpty())
+                    && StringUtils.isNotBlank(firstAnalysis.getKeyPoints())) {
+                try {
+                    List<String> keyPoints = objectMapper.readValue(firstAnalysis.getKeyPoints(),
+                            new TypeReference<List<String>>(){});
+                    detailVO.setKeyPoints(keyPoints);
+                } catch (Exception e) {
+                    log.error("从 Analysis 解析 keyPoints 失败: {}", e.getMessage());
+                }
+            }
+
+            // 转换分析建议
+            detailVO.setAnalysisAndSuggestions(analysisList.stream()
+                    .map(CompetitorAnalysis::getContent)
+                    .collect(Collectors.toList()));
+        } else {
+            detailVO.setAnalysisAndSuggestions(new ArrayList<>());
+        }
+
         // 转换标签
-        detailVO.setTags(tagList.stream().map(tag -> 
+        detailVO.setTags(tagList.stream().map(tag ->
             new CompetitorTagVO(tag.getLabel(), tag.getColor())
         ).collect(Collectors.toList()));
-        
-        // 转换分析建议
-        detailVO.setAnalysisAndSuggestions(analysisList.stream()
-                .map(CompetitorAnalysis::getContent)
-                .collect(Collectors.toList()));
-        
-        // 转换相关信息
-        detailVO.setRelatedInfo(competitorInfo.getRelatedInfo());
-        
+
         // 转换资源链接
-        detailVO.setSources(sourceList.stream().map(source -> 
+        detailVO.setSources(sourceList.stream().map(source ->
             new CompetitorSourceVO(source.getTitle(), source.getUrl())
         ).collect(Collectors.toList()));
-        
+
         // 处理截图列表（如果有）
         if (StringUtils.isNotBlank(competitorInfo.getSources())) {
             try {
-                List<String> screenshots = objectMapper.readValue(competitorInfo.getSources(), 
+                List<String> screenshots = objectMapper.readValue(competitorInfo.getSources(),
                         new TypeReference<List<String>>(){});
                 detailVO.setScreenshots(screenshots);
             } catch (Exception e) {
@@ -173,7 +224,7 @@ public class CompetitorServiceImpl implements CompetitorService {
         } else {
             detailVO.setScreenshots(new ArrayList<>());
         }
-        
+
         return detailVO;
     }
     
@@ -230,6 +281,13 @@ public class CompetitorServiceImpl implements CompetitorService {
         competitorVO.setBankName(competitorInfo.getCompany());
         competitorVO.setUpdateType(competitorInfo.getType());
         competitorVO.setUpdateTime(competitorInfo.getCaptureTime());
+        competitorVO.setImportance(competitorInfo.getImportance());
+        competitorVO.setRelevance(competitorInfo.getRelevance());
+        competitorVO.setSummary(competitorInfo.getSummary());
+        // 同时设置 company 和 type 字段，供前端使用
+        competitorVO.setCompany(competitorInfo.getCompany());
+        competitorVO.setType(competitorInfo.getType());
+        competitorVO.setCaptureTime(competitorInfo.getCaptureTime());
         return competitorVO;
     }
 }

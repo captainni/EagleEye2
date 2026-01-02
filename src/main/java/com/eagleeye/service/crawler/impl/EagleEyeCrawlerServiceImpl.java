@@ -155,7 +155,7 @@ public class EagleEyeCrawlerServiceImpl implements EagleEyeCrawlerService {
                                 if ("policy".equals(category)) policyCount++;
                                 else if ("competitor".equals(category)) competitorCount++;
                             }
-                            categoryStats = String.format("政策:%d,竞品:%d", policyCount, competitorCount);
+                            categoryStats = String.format("{\"policy\":%d,\"competitor\":%d}", policyCount, competitorCount);
                             logger.info("分类统计: policyCount={}, competitorCount={}, categoryStats={}", policyCount, competitorCount, categoryStats);
                         }
                     }

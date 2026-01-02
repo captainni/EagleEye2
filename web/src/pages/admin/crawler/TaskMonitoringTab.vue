@@ -195,8 +195,13 @@ const startPollingStatus = (taskId: string) => {
 
         // 解析分析结果并显示
         if (status.analysisResult) {
-          const result = status.analysisResult;
-          ElMessage.success(`分析完成！共 ${result.total} 篇，成功 ${result.success} 篇，跳过 ${result.skipped} 篇，失败 ${result.failed} 篇`);
+          try {
+            const result = JSON.parse(status.analysisResult);
+            ElMessage.success(`分析完成！共 ${result.total} 篇，成功 ${result.success} 篇，跳过 ${result.skipped} 篇，失败 ${result.failed} 篇`);
+          } catch (e) {
+            console.error('Failed to parse analysis result:', e);
+            ElMessage.success('分析完成！');
+          }
         } else {
           ElMessage.success('分析完成！');
         }

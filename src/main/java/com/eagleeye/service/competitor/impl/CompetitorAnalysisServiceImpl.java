@@ -212,15 +212,13 @@ public class CompetitorAnalysisServiceImpl implements CompetitorAnalysisService 
         // 1. 读取 Markdown 内容
         String markdownContent = Files.readString(Paths.get(markdownPath));
 
-        // 2. 检查是否已存在（通过 sourceUrl 去重）
+        // 2. 提取 sourceUrl（用于去重检查和存储）
         if (sourceUrl == null || sourceUrl.isEmpty()) {
             sourceUrl = extractSourceUrl(markdownContent);
         }
 
-        if (sourceUrl != null && isCompetitorExists(sourceUrl)) {
-            log.info("竞品动态已存在，跳过: {}", sourceUrl);
-            return;
-        }
+        // 注意：移除了去重检查，允许重新分析已存在的文章
+        // 这样用户点击【竞品分析】按钮时可以真正重新分析
 
         // 3. 获取用户产品列表
         String productsJson = null;
@@ -307,50 +305,100 @@ public class CompetitorAnalysisServiceImpl implements CompetitorAnalysisService 
      */
     @Transactional
     private void saveCompetitorAnalysisResult(String markdownContent, String sourceUrl, String source, CompetitorAnalysisResult result) {
-        // 1. 保存 CompetitorInfo
-        CompetitorInfo competitorInfo = new CompetitorInfo();
+        // 1. 查找或创建 CompetitorInfo
+        CompetitorInfo competitorInfo = findOrCreateCompetitorInfo(sourceUrl);
         competitorInfo.setTitle(extractTitle(markdownContent));
         competitorInfo.setCompany(result.getCompany());
         competitorInfo.setType(result.getType());
+        competitorInfo.setImportance(result.getImportance());
+        competitorInfo.setRelevance(result.getRelevance());
+        competitorInfo.setKeyPoints(convertKeyPointsToJson(result.getKeyPoints()));
         competitorInfo.setCaptureTime(LocalDateTime.now());
         competitorInfo.setTags(convertTagsToJson(result.getTags()));
         competitorInfo.setContent(markdownContent);
         competitorInfo.setSources(convertSourcesToJson(sourceUrl));
         competitorInfo.setSummary(result.getSummary());
+        competitorInfo.setMarketImpact(result.getMarketImpact());
         competitorInfo.setRelatedInfo(result.getCompetitiveAnalysis());
-        competitorInfo.setCreateTime(LocalDateTime.now());
         competitorInfo.setUpdateTime(LocalDateTime.now());
 
-        competitorRepository.insert(competitorInfo);
+        competitorRepository.updateById(competitorInfo);
         Long competitorId = competitorInfo.getId();
 
-        // 2. 保存 CompetitorAnalysis（将 marketImpact 和 ourSuggestions 整合到 content）
-        if (result.getMarketImpact() != null || result.getOurSuggestions() != null) {
-            StringBuilder contentBuilder = new StringBuilder();
+        // 2. 保存 CompetitorAnalysis（存储详细分析结果）
+        CompetitorAnalysis competitorAnalysis = new CompetitorAnalysis();
+        competitorAnalysis.setCompetitorId(competitorId);
+        competitorAnalysis.setImportance(result.getImportance());
+        competitorAnalysis.setRelevance(result.getRelevance());
+        competitorAnalysis.setKeyPoints(convertKeyPointsToJson(result.getKeyPoints()));
+        competitorAnalysis.setMarketImpact(result.getMarketImpact());
+        competitorAnalysis.setCompetitiveAnalysis(result.getCompetitiveAnalysis());
+        competitorAnalysis.setOurSuggestions(convertSuggestionsToJson(result.getOurSuggestions()));
 
-            if (result.getMarketImpact() != null) {
-                contentBuilder.append("## 市场影响分析\n\n").append(result.getMarketImpact()).append("\n\n");
+        // content 字段保留作为整合的摘要
+        StringBuilder contentBuilder = new StringBuilder();
+        if (result.getMarketImpact() != null) {
+            contentBuilder.append("## 市场影响\n\n").append(result.getMarketImpact()).append("\n\n");
+        }
+        if (result.getCompetitiveAnalysis() != null) {
+            contentBuilder.append("## 竞争态势\n\n").append(result.getCompetitiveAnalysis()).append("\n\n");
+        }
+        if (result.getOurSuggestions() != null && !result.getOurSuggestions().isEmpty()) {
+            contentBuilder.append("## 应对建议\n\n");
+            for (CompetitorAnalysisResult.Suggestion suggestion : result.getOurSuggestions()) {
+                contentBuilder.append("- **建议**: ").append(suggestion.getSuggestion()).append("\n");
+                contentBuilder.append("  **理由**: ").append(suggestion.getReason()).append("\n\n");
             }
+        }
+        competitorAnalysis.setContent(contentBuilder.toString());
 
-            if (result.getOurSuggestions() != null && !result.getOurSuggestions().isEmpty()) {
-                contentBuilder.append("## 应对建议\n\n");
-                for (CompetitorAnalysisResult.Suggestion suggestion : result.getOurSuggestions()) {
-                    contentBuilder.append("- **建议**: ").append(suggestion.getSuggestion()).append("\n");
-                    contentBuilder.append("  **理由**: ").append(suggestion.getReason()).append("\n\n");
-                }
-            }
+        competitorAnalysis.setSortOrder(1);
+        competitorAnalysis.setUpdateTime(LocalDateTime.now());
 
-            CompetitorAnalysis competitorAnalysis = new CompetitorAnalysis();
-            competitorAnalysis.setCompetitorId(competitorId);
-            competitorAnalysis.setContent(contentBuilder.toString());
-            competitorAnalysis.setSortOrder(1);
+        // 查找或创建 CompetitorAnalysis（通过 competitorId 和 sortOrder）
+        LambdaQueryWrapper<CompetitorAnalysis> analysisWrapper = new LambdaQueryWrapper<>();
+        analysisWrapper.eq(CompetitorAnalysis::getCompetitorId, competitorId)
+                .eq(CompetitorAnalysis::getSortOrder, 1);
+        CompetitorAnalysis existingAnalysis = competitorAnalysisRepository.selectOne(analysisWrapper);
+
+        if (existingAnalysis != null) {
+            // 更新已存在的记录
+            existingAnalysis.setImportance(competitorAnalysis.getImportance());
+            existingAnalysis.setRelevance(competitorAnalysis.getRelevance());
+            existingAnalysis.setKeyPoints(competitorAnalysis.getKeyPoints());
+            existingAnalysis.setMarketImpact(competitorAnalysis.getMarketImpact());
+            existingAnalysis.setCompetitiveAnalysis(competitorAnalysis.getCompetitiveAnalysis());
+            existingAnalysis.setOurSuggestions(competitorAnalysis.getOurSuggestions());
+            existingAnalysis.setContent(competitorAnalysis.getContent());
+            existingAnalysis.setUpdateTime(LocalDateTime.now());
+            competitorAnalysisRepository.updateById(existingAnalysis);
+        } else {
+            // 创建新记录
             competitorAnalysis.setCreateTime(LocalDateTime.now());
-            competitorAnalysis.setUpdateTime(LocalDateTime.now());
-
             competitorAnalysisRepository.insert(competitorAnalysis);
         }
 
         log.info("竞品分析结果已保存: competitorId={}", competitorId);
+    }
+
+    /**
+     * 根据 sourceUrl 查找或创建 CompetitorInfo
+     */
+    private CompetitorInfo findOrCreateCompetitorInfo(String sourceUrl) {
+        if (sourceUrl != null && !sourceUrl.isEmpty()) {
+            LambdaQueryWrapper<CompetitorInfo> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.like(CompetitorInfo::getSources, "%" + sourceUrl + "%");
+            CompetitorInfo existing = competitorRepository.selectOne(queryWrapper);
+            if (existing != null) {
+                log.info("找到已存在的竞品记录，将更新: id={}, sourceUrl={}", existing.getId(), sourceUrl);
+                return existing;
+            }
+        }
+
+        // 创建新记录
+        CompetitorInfo newInfo = new CompetitorInfo();
+        newInfo.setCreateTime(LocalDateTime.now());
+        return newInfo;
     }
 
     /**
@@ -374,6 +422,30 @@ public class CompetitorAnalysisServiceImpl implements CompetitorAnalysisService 
             return objectMapper.writeValueAsString(tags != null ? tags : new ArrayList<>());
         } catch (Exception e) {
             log.error("转换 tags 为 JSON 失败", e);
+            return "[]";
+        }
+    }
+
+    /**
+     * 将 keyPoints 列表转换为 JSON 字符串
+     */
+    private String convertKeyPointsToJson(List<String> keyPoints) {
+        try {
+            return objectMapper.writeValueAsString(keyPoints != null ? keyPoints : new ArrayList<>());
+        } catch (Exception e) {
+            log.error("转换 keyPoints 为 JSON 失败", e);
+            return "[]";
+        }
+    }
+
+    /**
+     * 将 suggestions 列表转换为 JSON 字符串
+     */
+    private String convertSuggestionsToJson(List<CompetitorAnalysisResult.Suggestion> suggestions) {
+        try {
+            return objectMapper.writeValueAsString(suggestions != null ? suggestions : new ArrayList<>());
+        } catch (Exception e) {
+            log.error("转换 suggestions 为 JSON 失败", e);
             return "[]";
         }
     }

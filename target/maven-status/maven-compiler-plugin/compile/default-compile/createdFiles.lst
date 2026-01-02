@@ -15,11 +15,15 @@ com/eagleeye/model/vo/CrawlerTaskLogVO.class
 com/eagleeye/service/policy/PolicyAnalyzer$PolicyAnalysisRequest.class
 com/eagleeye/service/crawler/UserSubscriptionService.class
 com/eagleeye/service/policy/PolicyService.class
+com/eagleeye/service/competitor/impl/CompetitorServiceImpl$3.class
 com/eagleeye/model/vo/ApiResponseVO.class
+com/eagleeye/service/competitor/impl/CompetitorAnalysisServiceImpl$ArticleInfo.class
 com/eagleeye/model/dto/RequirementQueryDTO.class
+com/eagleeye/model/dto/CompetitorAnalysisResult$Suggestion.class
 com/eagleeye/model/entity/UserSettings.class
 com/eagleeye/repository/CrawlerTaskLogRepository.class
 com/eagleeye/model/vo/dashboard/RequirementSummaryVO.class
+com/eagleeye/service/competitor/CompetitorAnalyzer$CompetitorAnalysisRequest.class
 com/eagleeye/repository/CompetitorAnalysisRepository.class
 com/eagleeye/model/dto/UserSubscriptionCreateDTO.class
 com/eagleeye/model/dto/CrawlerConfigQueryDTO.class
@@ -50,6 +54,7 @@ com/eagleeye/model/entity/PolicyInfo.class
 com/eagleeye/controller/policy/PolicyController.class
 com/eagleeye/model/entity/CompetitorSource.class
 com/eagleeye/common/api/CommonPage.class
+com/eagleeye/service/competitor/CompetitorAnalyzer.class
 com/eagleeye/model/vo/CompetitorSourceVO.class
 com/eagleeye/model/entity/Requirement.class
 com/eagleeye/config/CorsConfig$1.class
@@ -59,6 +64,7 @@ com/eagleeye/controller/crawler/UserSubscriptionController.class
 com/eagleeye/service/settings/impl/SettingsServiceImpl$3.class
 com/eagleeye/repository/UserProductRepository.class
 com/eagleeye/repository/RequirementRepository.class
+com/eagleeye/service/competitor/impl/CompetitorServiceImpl$2.class
 com/eagleeye/model/entity/User.class
 com/eagleeye/controller/crawler/CrawlerTaskLogController.class
 com/eagleeye/model/vo/CrawlerConfigDetailVO.class
@@ -73,6 +79,7 @@ com/eagleeye/common/api/ResultCode.class
 com/eagleeye/model/dto/CrawlerConfigCreateDTO.class
 com/eagleeye/service/settings/impl/SettingsServiceImpl.class
 com/eagleeye/controller/competitor/CompetitorController.class
+com/eagleeye/config/AsyncConfig.class
 com/eagleeye/service/settings/impl/SettingsServiceImpl$2.class
 com/eagleeye/model/entity/CompetitorTag.class
 com/eagleeye/controller/dashboard/DashboardController.class
@@ -84,12 +91,14 @@ com/eagleeye/repository/PolicySuggestionRepository.class
 com/eagleeye/service/requirement/impl/RequirementServiceImpl.class
 com/eagleeye/model/vo/CompetitorDetailVO.class
 com/eagleeye/service/crawler/CrawlerConfigAdminService$TriggerResult.class
+com/eagleeye/service/competitor/impl/CompetitorAnalysisServiceImpl.class
 com/eagleeye/model/vo/SettingsDataVO.class
 com/eagleeye/model/vo/dashboard/DashboardStatsVO$CompetitorStatVO.class
 com/eagleeye/common/api/IErrorCode.class
 com/eagleeye/model/vo/ProductVO.class
 com/eagleeye/service/crawler/impl/EagleEyeCrawlerServiceImpl.class
 com/eagleeye/repository/UserSourceSubscriptionRepository.class
+com/eagleeye/model/dto/CompetitorAnalysisResult.class
 com/eagleeye/model/vo/dashboard/PolicySummaryVO.class
 com/eagleeye/service/policy/impl/PolicyServiceImpl.class
 com/eagleeye/service/policy/impl/PolicyServiceImpl$2.class
@@ -116,6 +125,7 @@ com/eagleeye/service/policy/impl/PolicyServiceImpl$1.class
 com/eagleeye/model/dto/ProductCreateDTO.class
 com/eagleeye/model/entity/CrawlerTaskLog.class
 com/eagleeye/model/vo/CompetitorTagVO.class
+com/eagleeye/service/competitor/CompetitorAnalysisService$AnalysisSummary.class
 com/eagleeye/model/vo/SourceVO.class
 com/eagleeye/model/vo/PolicyDetailVO.class
 com/eagleeye/model/dto/RequirementUpdateDTO.class
@@ -125,3 +135,4 @@ com/eagleeye/repository/UserSettingsRepository.class
 com/eagleeye/service/policy/PolicyAnalysisService.class
 com/eagleeye/config/CorsConfig.class
 com/eagleeye/repository/PolicyAnalysisRepository.class
+com/eagleeye/service/competitor/CompetitorAnalysisService.class

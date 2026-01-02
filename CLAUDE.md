@@ -294,3 +294,49 @@ docker exec -i my-mysql mysql -ucaptain -p123456 eagleeye -e "SELECT COUNT(*) FR
 - 查看爬取结果目录: `ls -la crawl_files/`
 - 查看 Claude CLI 日志: `tail -100 logs/claude-cli.log`
 - 查看后端日志中的错误: `tail -100 logs/backend.log | grep -i error`
+
+---
+
+## Dev Browser 技能 - 浏览器自动化工具
+
+Dev Browser 是已安装的浏览器自动化插件，可以通过 Claude 控制 Windows Chrome 浏览器。
+
+### 使用方法
+
+直接用自然语言告诉 Claude 要做什么：
+
+```bash
+# 示例指令
+帮我用dev browser技能： 
+打开 https://github.com
+访问百度并截图
+使用扩展打开 http://localhost:8088
+登录这个网站并提取数据
+测试前端登录功能
+```
+
+### 关键词
+
+- **打开/访问/进入** 网址
+- **截图**
+- **点击/填写** 表单
+- **登录** 网站
+- **测试** 页面
+- **提取** 数据
+
+### 启动扩展模式（持久化后台运行）
+
+```bash
+# 启动中继服务器（后台运行，关闭终端也不会停止）
+cd ~/.claude/plugins/cache/dev-browser-marketplace/dev-browser/*/skills/dev-browser
+nohup npm run start-extension > /tmp/dev-browser-relay.log 2>&1 &
+
+# 查看日志
+tail -f /tmp/dev-browser-relay.log
+
+# 停止服务
+pkill -f "start-relay"
+```
+
+然后在 Windows Chrome 中激活 Dev Browser 扩展。扩展会自动连接并保持连接状态。
+

@@ -35,7 +35,22 @@ public class CompetitorInfo {
      * 动态类型：产品更新、营销活动、财报数据、APP更新、利率调整、合作动态等
      */
     private String type;
-    
+
+    /**
+     * 重要程度: 高|中|低
+     */
+    private String importance;
+
+    /**
+     * 与我方产品的相关度: 高|中|低
+     */
+    private String relevance;
+
+    /**
+     * 关键要点 (JSON格式存储，用于详情页高亮)
+     */
+    private String keyPoints;
+
     /**
      * 抓取时间
      */
@@ -60,7 +75,12 @@ public class CompetitorInfo {
      * 分析摘要
      */
     private String summary;
-    
+
+    /**
+     * 市场影响分析
+     */
+    private String marketImpact;
+
     /**
      * 相关信息/详细说明
      */

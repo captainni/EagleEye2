@@ -250,13 +250,27 @@ const getAnalysisStatusText = (status: string | undefined): string => {
   }
 };
 
-// 解析 categoryStats JSON
+// 解析 categoryStats JSON（兼容旧格式和新格式）
 const parseCategoryStats = (stats: string | undefined): Record<string, number> => {
   if (!stats) return {};
   try {
+    // 尝试 JSON 解析
     return JSON.parse(stats);
   } catch {
-    return {};
+    // 兼容旧格式："??:0,??:3" 或 "政策:0,竞品:3"
+    try {
+      const result: Record<string, number> = {};
+      // 正则匹配数字
+      const numbers = stats.match(/\d+/g);
+      if (numbers && numbers.length >= 2) {
+        // 旧格式假设第一个是政策，第二个是竞品
+        result.policy = parseInt(numbers[0]) || 0;
+        result.competitor = parseInt(numbers[1]) || 0;
+      }
+      return result;
+    } catch {
+      return {};
+    }
   }
 };
 

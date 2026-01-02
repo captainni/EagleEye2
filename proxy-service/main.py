@@ -115,22 +115,36 @@ async def analyze_policy(req: Request):
 {products}
 """
 
-        # 构建完整的 prompt
-        prompt = f"""请使用 policy-analyzer skill 分析以下政策文章，并以 JSON 格式返回分析结果：
+        # 构建完整的 prompt（强化 JSON 格式要求）
+        prompt = f"""请分析以下政策文章。
+
+【输出格式要求 - 必须严格遵守】
+1. 只返回纯 JSON 对象，格式：{{"key": "value"}}
+2. 绝对不要使用任何 markdown 标记，包括：
+   - ❌ 不要用 ```json 或 ``` 包裹
+   - ❌ 不要用 **粗体** 或其他格式
+   - ❌ 不要添加任何解释文字
+3. 输出必须从 {{ 开始，以 }} 结束
+4. 中文引号必须转义或使用英文引号
+
 {products_context}
 
 ## 政策文章内容
 {content}
 
-请确保返回结果包含以下字段：
-- policyType: 政策类型
-- importance: 重要程度
-- relevance: 与产品的相关度（高|中|低）
-- areas: 相关领域标签数组
-- summary: 政策摘要
-- keyPoints: 关键条款数组（用于高亮显示）
-- impactAnalysis: 影响分析
-- suggestions: 建议数组，每条包含 suggestion 和 reason
+请直接返回 JSON（不要有任何额外内容）：
+{{
+  "policyType": "政策类型",
+  "importance": "重要程度（高|中|低）",
+  "relevance": "与产品的相关度（高|中|低）",
+  "areas": ["领域1", "领域2"],
+  "summary": "政策摘要",
+  "keyPoints": ["关键条款1", "关键条款2"],
+  "impactAnalysis": "影响分析",
+  "suggestions": [
+    {{"suggestion": "建议内容", "reason": "原因"}}
+  ]
+}}
 """
 
         proc = None
@@ -257,24 +271,38 @@ async def analyze_competitor(req: Request):
 {user_products}
 """
 
-        # 构建完整的 prompt
-        prompt = f"""请使用 competitor-analyzer skill 分析以下竞品文章，并以 JSON 格式返回分析结果：
+        # 构建完整的 prompt（强化 JSON 格式要求）
+        prompt = f"""请分析以下竞品文章。
+
+【输出格式要求 - 必须严格遵守】
+1. 只返回纯 JSON 对象，格式：{{"key": "value"}}
+2. 绝对不要使用任何 markdown 标记，包括：
+   - ❌ 不要用 ```json 或 ``` 包裹
+   - ❌ 不要用 **粗体** 或其他格式
+   - ❌ 不要添加任何解释文字
+3. 输出必须从 {{ 开始，以 }} 结束
+4. 中文引号必须转义或使用英文引号
+
 {products_context}
 
 ## 竞品文章内容
 {content}
 
-请确保返回结果包含以下字段：
-- company: 竞品公司/机构名称
-- type: 动态类型（产品更新/营销活动/财报数据/APP更新/利率调整/合作动态/政策响应）
-- importance: 重要程度（高|中|低）
-- relevance: 与我方产品的相关度（高|中|低）
-- tags: 相关标签数组
-- summary: 动态摘要
-- keyPoints: 关键要点数组（用于高亮显示，必须是原文语句）
-- marketImpact: 市场影响分析
-- competitiveAnalysis: 竞争态势分析
-- ourSuggestions: 建议数组，每条包含 suggestion 和 reason
+请直接返回 JSON（不要有任何额外内容）：
+{{
+  "company": "竞品公司/机构名称",
+  "type": "动态类型（产品更新/营销活动/财报数据/APP更新/利率调整/合作动态/政策响应）",
+  "importance": "重要程度（高|中|低）",
+  "relevance": "与我方产品的相关度（高|中|低）",
+  "tags": ["标签1", "标签2"],
+  "summary": "动态摘要",
+  "keyPoints": ["关键要点1（必须是原文语句）", "关键要点2"],
+  "marketImpact": "市场影响分析",
+  "competitiveAnalysis": "竞争态势分析",
+  "ourSuggestions": [
+    {{"suggestion": "建议内容", "reason": "原因"}}
+  ]
+}}
 """
 
         proc = None
@@ -335,16 +363,27 @@ async def analyze_competitor(req: Request):
                 # 尝试直接解析
                 result = json.loads(result_text)
                 return JSONResponse(content=result)
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
+                # 记录原始输出用于调试
+                claude_logger.warning(f"JSON 解析失败，原始输出: {result_text[:500]}...")
+                claude_logger.warning(f"JSON 解析错误: {e}")
+
                 # 如果直接解析失败，尝试提取 JSON 部分
                 start_idx = result_text.find("{")
                 end_idx = result_text.rfind("}") + 1
                 if start_idx >= 0 and end_idx > start_idx:
                     json_str = result_text[start_idx:end_idx]
-                    result = json.loads(json_str)
-                    return JSONResponse(content=result)
+                    try:
+                        result = json.loads(json_str)
+                        claude_logger.info("JSON 提取解析成功")
+                        return JSONResponse(content=result)
+                    except json.JSONDecodeError as e2:
+                        claude_logger.error(f"JSON 提取后仍解析失败: {e2}")
+                        claude_logger.error(f"提取的 JSON 片段: {json_str[:500]}...")
+                        raise HTTPException(status_code=500, detail=f"JSON parse error: {e2}")
                 else:
                     # 无法解析为 JSON，返回原始文本
+                    claude_logger.error(f"无法找到 JSON 结构，返回原始文本")
                     return {"rawOutput": result_text}
 
         except HTTPException:

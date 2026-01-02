@@ -30,7 +30,37 @@ public class CompetitorAnalysis {
      * 分析和建议内容
      */
     private String content;
-    
+
+    /**
+     * 重要程度: 高|中|低
+     */
+    private String importance;
+
+    /**
+     * 相关度: 高|中|低
+     */
+    private String relevance;
+
+    /**
+     * 关键要点 (JSON格式存储)
+     */
+    private String keyPoints;
+
+    /**
+     * 市场影响分析
+     */
+    private String marketImpact;
+
+    /**
+     * 竞争态势分析
+     */
+    private String competitiveAnalysis;
+
+    /**
+     * 针对性建议列表 (JSON格式存储)
+     */
+    private String ourSuggestions;
+
     /**
      * 排序序号
      */

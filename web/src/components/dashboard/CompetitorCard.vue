@@ -36,42 +36,20 @@ const props = defineProps<{
 // 将API返回的数据格式转换为组件所需格式
 const mappedCompetitors = computed(() => {
   return props.competitors.map(comp => {
-    // 更安全地获取建议信息
+    // 简化建议获取逻辑，与政策卡片保持一致
     let suggestionText = '暂无建议';
-    
-    // 优先检查analysisAndSuggestions数组 (竞品详情页使用的格式)
-    if (comp.analysisAndSuggestions && Array.isArray(comp.analysisAndSuggestions) && comp.analysisAndSuggestions.length > 0) {
-      // 获取以"建议："开头的条目，如果没有则取第一条
-      const suggestionEntry = comp.analysisAndSuggestions.find(item => 
-        typeof item === 'string' && item.includes('建议：')
-      ) || comp.analysisAndSuggestions[0];
-      
-      if (suggestionEntry && typeof suggestionEntry === 'string') {
-        // 从条目中提取建议部分
-        let text = suggestionEntry;
-        if (text.includes('建议：')) {
-          text = text.split('建议：')[1];
-        }
-        // 提取纯文本 (移除可能的HTML标记)
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = text;
-        suggestionText = tempDiv.textContent || tempDiv.innerText || text;
-      }
-    }
-    // 如果analysisAndSuggestions不存在，则检查suggestion直接属性
-    else if (comp.suggestion && typeof comp.suggestion === 'string') {
-      suggestionText = comp.suggestion;
-    }
-    // 最后检查suggestions数组 (如果前两种方式都没找到)
-    else if (comp.suggestions && Array.isArray(comp.suggestions) && comp.suggestions.length > 0) {
-      const firstSuggestion = comp.suggestions[0];
-      if (typeof firstSuggestion === 'string') {
-        suggestionText = firstSuggestion;
-      } else if (firstSuggestion && typeof firstSuggestion === 'object') {
-        if ('suggestion' in firstSuggestion && typeof firstSuggestion.suggestion === 'string') {
-          suggestionText = firstSuggestion.suggestion;
-        } else if ('content' in firstSuggestion && typeof firstSuggestion.content === 'string') {
-          suggestionText = firstSuggestion.content;
+
+    // 从 suggestion 字段中提取简短建议（格式：## 应对建议\n\n- **建议**: xxx\n  **理由**: xxx）
+    if (comp.suggestion && typeof comp.suggestion === 'string') {
+      // 查找"应对建议"部分
+      const match = comp.suggestion.match(/## 应对建议\s*\n\s*-\s*\*\*建议\*\*:\s*([^\n]+)/);
+      if (match && match[1]) {
+        suggestionText = match[1].trim();
+      } else {
+        // 如果没有找到应对建议格式，尝试提取第一条建议
+        const firstSuggestion = comp.suggestion.match(/-\s*\*\*建议\*\*:\s*([^\n]+)/);
+        if (firstSuggestion && firstSuggestion[1]) {
+          suggestionText = firstSuggestion[1].trim();
         }
       }
     }

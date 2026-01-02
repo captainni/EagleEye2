@@ -211,6 +211,6 @@ export async function triggerCompetitorAnalysis(taskId: string): Promise<PolicyA
 // GET /v1/admin/crawler/tasks/{taskId}/status (复用现有接口，新增返回分析状态)
 export interface PolicyAnalysisTaskStatus extends TaskStatus {
   analysisStatus?: 'pending' | 'analyzing' | 'completed' | 'failed';
-  analysisResult?: AnalysisResult;
+  analysisResult?: string;  // JSON 字符串，需要 JSON.parse() 解析
 }
 

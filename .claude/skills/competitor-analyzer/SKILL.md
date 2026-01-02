@@ -11,8 +11,29 @@ description: 竞品文章分析 AI 工具。读取竞品文章 Markdown 内容�
 ## 使用方法
 用户提供竞品文章的 Markdown 内容，即可进行深度分析。如需评估相关度，可同时提供用户产品信息。
 
-## 输出格式
-JSON 格式，包含：`company`、`type`、`importance`、`relevance`、`tags`、`summary`、`keyPoints`、`marketImpact`、`competitiveAnalysis`、`ourSuggestions`
+## ⚠️ 输出格式要求（必须严格遵守）
+
+### 核心约束
+1. **只返回纯 JSON 对象**，格式：`{"key": "value"}`
+2. **绝对不要使用任何 markdown 标记**，包括：
+   - ❌ 不要用 ```json 或 ``` 包裹
+   - ❌ 不要用 **粗体** 或其他格式
+   - ❌ 不要添加任何解释文字
+3. **输出必须从 `{` 开始，以 `}` 结束**
+4. **中文引号必须转义或使用英文引号**
+
+### 必需字段
+JSON 必须包含以下字段：
+- `company` - 竞品公司/机构名称
+- `type` - 动态类型
+- `importance` - 重要程度（高|中|低）
+- `relevance` - 与我方产品的相关度（高|中|低）
+- `tags` - 相关标签数组
+- `summary` - 动态摘要
+- `keyPoints` - 关键要点数组（用于高亮显示）
+- `marketImpact` - 市场影响分析
+- `competitiveAnalysis` - 竞争态势分析
+- `ourSuggestions` - 建议数组
 
 ## 输入参数
 | 参数 | 类型 | 必填 | 说明 |
@@ -21,7 +42,8 @@ JSON 格式，包含：`company`、`type`、`importance`、`relevance`、`tags`�
 | `userProducts` | string | 否 | 用户产品列表的 JSON 字符串（用于评估相关度） |
 
 ## 输出示例
-```json
+**注意：以下示例仅为参考格式，实际输出时不要包含任何 markdown 标记**
+
 {
   "company": "平安银行",
   "type": "政策响应",
@@ -48,8 +70,7 @@ JSON 格式，包含：`company`、`type`、`importance`、`relevance`、`tags`�
     }
   ]
 }
-```
 
-## 详细分析标准
+## 详细参考
 
 完整的分析标准、判定规则和注意事项请参见 [REFERENCE.md](./REFERENCE.md)。

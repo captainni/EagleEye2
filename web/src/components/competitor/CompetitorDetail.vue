@@ -8,10 +8,24 @@
         <span><i class="fas fa-tags mr-1"></i> 类型：{{ competitor.type }}</span>
         <span><i class="fas fa-clock mr-1"></i> 捕获时间：{{ competitor.captureTime }}</span>
       </div>
+
+      <!-- 重要性和相关度标签 -->
+      <div class="flex flex-wrap gap-2 mb-3">
+        <span v-if="competitor.importance" class="px-2 py-0.5 text-xs font-medium rounded-full"
+          :class="getImportanceClass(competitor.importance)">
+          重要性: {{ competitor.importance }}
+        </span>
+        <span v-if="competitor.relevance" class="px-2 py-0.5 text-xs font-medium rounded-full"
+          :class="getRelevanceClass(competitor.relevance)">
+          相关度: {{ competitor.relevance }}
+        </span>
+      </div>
+
+      <!-- 标签 -->
       <div class="flex flex-wrap gap-2">
-        <span 
-          v-for="(tag, index) in competitor.tags" 
-          :key="index" 
+        <span
+          v-for="(tag, index) in competitor.tags"
+          :key="index"
           class="px-2 py-0.5 text-xs font-medium rounded-full"
           :class="`bg-${tag.color}-100 text-${tag.color}-600`"
         >
@@ -20,28 +34,68 @@
       </div>
     </div>
 
-    <!-- 分析摘要与建议 -->
-    <div class="mb-8 p-4 bg-orange-50 border-l-4 border-warning rounded-r-md">
-      <h4 class="text-base font-semibold text-warning mb-2">分析摘要与建议：</h4>
+    <!-- 摘要区域 -->
+    <div v-if="competitor.summary" class="mb-8 p-4 bg-gray-50 border-l-4 border-gray-400 rounded-r-md">
+      <h4 class="text-base font-semibold text-gray-700 mb-2">摘要</h4>
+      <div class="prose prose-sm max-w-none text-gray-600 leading-relaxed" v-html="renderMarkdown(competitor.summary)"></div>
+    </div>
+
+    <!-- 关键要点 -->
+    <div v-if="competitor.keyPoints && competitor.keyPoints.length > 0" class="mb-8 p-4 bg-blue-50 border-l-4 border-primary rounded-r-md">
+      <h4 class="text-base font-semibold text-primary mb-2">关键要点</h4>
       <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
-        <li v-for="(suggestion, index) in competitor.analysisAndSuggestions" :key="index" v-html="suggestion"></li>
+        <li v-for="(point, index) in competitor.keyPoints" :key="index">{{ point }}</li>
       </ul>
     </div>
 
-    <!-- 相关信息/原文链接 -->
-    <div class="mb-6">
-      <h4 class="text-base font-semibold text-gray-700 mb-3">相关信息/原文链接：</h4>
-      <div 
+    <!-- 市场影响分析 -->
+    <div v-if="competitor.marketImpact" class="mb-8 p-4 bg-orange-50 border-l-4 border-warning rounded-r-md">
+      <h4 class="text-base font-semibold text-warning mb-2">市场影响分析</h4>
+      <div class="prose prose-sm max-w-none text-gray-700 leading-relaxed" v-html="renderAndHighlight(competitor.marketImpact)"></div>
+    </div>
+
+    <!-- 竞争态势分析 -->
+    <div v-if="competitor.competitiveAnalysis" class="mb-8 p-4 bg-orange-50 border-l-4 border-warning rounded-r-md">
+      <h4 class="text-base font-semibold text-warning mb-2">竞争态势分析</h4>
+      <div class="prose prose-sm max-w-none text-gray-700 leading-relaxed" v-html="renderAndHighlight(competitor.competitiveAnalysis)"></div>
+    </div>
+
+    <!-- 分析摘要与建议 -->
+    <div class="mb-8 p-4 bg-orange-50 border-l-4 border-warning rounded-r-md">
+      <h4 class="text-base font-semibold text-warning mb-2">分析摘要与建议：</h4>
+      <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+        <li v-for="(suggestion, index) in competitor.analysisAndSuggestions" :key="index"
+            v-html="renderMarkdown(suggestion)"
+            class="leading-relaxed"></li>
+      </ul>
+    </div>
+
+    <!-- 相关信息/原文链接（带关键词高亮） -->
+    <div v-if="contentToDisplay" class="mb-6">
+      <h4 class="text-base font-semibold text-gray-700 mb-3">详细信息：</h4>
+      <div
         class="prose prose-sm max-w-none text-gray-600 leading-relaxed border border-gray-200 rounded-md p-4"
-        v-html="competitor.relatedInfo"
+        v-html="renderAndHighlight(contentToDisplay)"
       ></div>
-      <div class="flex space-x-4 mt-2">
-        <img 
-          v-for="(screenshot, index) in competitor.screenshots" 
-          :key="index" 
-          :src="screenshot" 
-          :alt="`截图 ${index + 1}`" 
-          class="rounded border border-gray-300"
+
+      <!-- 原文链接 -->
+      <div v-if="competitor.sources && competitor.sources.length > 0" class="mt-3">
+        <template v-for="(source, index) in competitor.sources" :key="index">
+          <a :href="source.url" target="_blank" class="text-xs text-primary hover:underline inline-flex items-center mr-3">
+            <i class="fas fa-external-link-alt mr-1"></i>
+            {{ source.title || '查看原文链接' }}
+          </a>
+        </template>
+      </div>
+
+      <!-- 截图展示 -->
+      <div v-if="competitor.screenshots && competitor.screenshots.length > 0" class="flex flex-wrap gap-4 mt-4">
+        <img
+          v-for="(screenshot, index) in competitor.screenshots"
+          :key="index"
+          :src="screenshot"
+          :alt="`截图 ${index + 1}`"
+          class="rounded border border-gray-300 max-w-md"
         >
       </div>
     </div>
@@ -65,21 +119,170 @@
 </template>
 
 <script lang="ts" setup>
-import { defineProps } from 'vue';
-// import { CompetitorDetail } from '../../mock/competitor/competitorDetail'; // 不再需要 Mock 类型
-import { CompetitorVO } from '@/api/competitor'; // 导入更新后的 API VO 类型
+import { defineProps, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { convertCompetitorToRequirement } from '@/services/requirementService';
+import { ElMessage } from 'element-plus';
+import { CompetitorVO } from '@/api/competitor';
+import MarkdownIt from 'markdown-it';
 
+// 创建 Markdown 实例
+const md = new MarkdownIt({
+  html: true,        // 允许 HTML 标签
+  linkify: true,     // 自动转换 URL 为链接
+  typographer: true  // 启用一些语言中立的替换和引号美化
+});
+
+const router = useRouter();
 const props = defineProps<{
-  competitor: CompetitorVO; // 使用 API VO 类型
+  competitor: CompetitorVO;
 }>();
 
-const convertToRequirement = () => {
-  // 这里应该是转为需求的逻辑，暂时使用alert模拟
-  alert('需求已成功转化！');
+// 获取要显示的内容
+const contentToDisplay = computed(() => {
+  return props.competitor.content || props.competitor.relatedInfo || '';
+});
+
+// Markdown 渲染方法
+function renderMarkdown(content: string): string {
+  if (!content) return '';
+  return md.render(content);
+}
+
+// 渲染并高亮关键词
+function renderAndHighlight(content: string): string {
+  if (!content) return '';
+
+  // 先渲染 Markdown
+  let htmlContent = md.render(content);
+
+  // 如果有关键词，进行高亮
+  if (props.competitor.keyPoints && props.competitor.keyPoints.length > 0) {
+    props.competitor.keyPoints.forEach((point: string) => {
+      if (point) {
+        const escapedPoint = point.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escapedPoint, 'gi');
+        htmlContent = htmlContent.replace(regex, (match: string) =>
+          `<mark class="bg-yellow-200 px-0.5 rounded">${match}</mark>`
+        );
+      }
+    });
+  }
+
+  return htmlContent;
+}
+
+// 获取重要性标签样式
+function getImportanceClass(importance: string): string {
+  const map: Record<string, string> = {
+    '高': 'bg-red-100 text-red-600',
+    '中': 'bg-yellow-100 text-yellow-600',
+    '低': 'bg-green-100 text-green-600'
+  };
+  return map[importance] || 'bg-gray-100 text-gray-600';
+}
+
+// 获取相关度标签样式
+function getRelevanceClass(relevance: string): string {
+  const map: Record<string, string> = {
+    '高': 'bg-orange-100 text-orange-600',
+    '中': 'bg-blue-100 text-blue-600',
+    '低': 'bg-gray-100 text-gray-500'
+  };
+  return map[relevance] || 'bg-gray-100 text-gray-600';
+}
+
+const convertToRequirement = async () => {
+  if (!props.competitor.id) {
+    ElMessage.error('无法获取竞品ID');
+    return;
+  }
+  try {
+    const competitorId = Number(props.competitor.id);
+    if (isNaN(competitorId)) {
+      ElMessage.error('无效的竞品ID');
+      return;
+    }
+    await convertCompetitorToRequirement(competitorId);
+    ElMessage.success('需求已成功转化！');
+  } catch (error: any) {
+    console.error('Error converting competitor to requirement:', error);
+    ElMessage.error(error.response?.data?.message || '需求转化失败，请稍后重试');
+  }
 };
 </script>
 
-<style>
+<style scoped>
+.prose {
+  color: #374151;
+  line-height: 1.75;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.prose h1 { font-size: 1.5em; }
+.prose h2 { font-size: 1.25em; }
+.prose h3 { font-size: 1.125em; }
+.prose h4 { font-size: 1em; }
+
+.prose p {
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+}
+
+.prose ul, .prose ol {
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+  padding-left: 1.5em;
+}
+
+.prose li {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+.prose strong {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.prose a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.prose a:hover {
+  color: #1d4ed8;
+}
+
+.prose code {
+  background-color: #f3f4f6;
+  color: #ef4444;
+  padding: 0.125em 0.25em;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+
+.prose pre {
+  background-color: #1f2937;
+  color: #f9fafb;
+  padding: 1em;
+  border-radius: 0.375rem;
+  overflow-x: auto;
+}
+
+.prose blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1em;
+  color: #6b7280;
+  font-style: italic;
+}
+
 mark {
   background-color: #fef08a; /* Yellow-200 */
   padding: 0.1em 0.2em;
