@@ -15,7 +15,7 @@ export interface QuickEntry {
   title: string;
   description: string;
   icon: string;
-  path: string;
+  link: string;
 }
 
 // 默认用户数据
@@ -31,25 +31,25 @@ export const defaultQuickEntryData: QuickEntry[] = [
     title: '政策监控',
     description: '查看最新监管政策',
     icon: 'fa-file-alt',
-    path: '/policy-monitoring'
+    link: '/policy-monitoring'
   },
   {
     title: '竞品追踪',
     description: '监控竞品动态',
     icon: 'fa-chart-line',
-    path: '/competitor-tracking'
+    link: '/competitor-tracking'
   },
   {
     title: '需求池',
     description: '管理产品需求',
     icon: 'fa-tasks',
-    path: '/requirement-pool'
+    link: '/requirement-pool'
   },
   {
     title: '设置',
     description: '个性化配置',
     icon: 'fa-cog',
-    path: '/settings'
+    link: '/settings'
   }
 ];
 

@@ -98,6 +98,7 @@ com/eagleeye/common/api/IErrorCode.class
 com/eagleeye/model/vo/ProductVO.class
 com/eagleeye/service/crawler/impl/EagleEyeCrawlerServiceImpl.class
 com/eagleeye/repository/UserSourceSubscriptionRepository.class
+com/eagleeye/service/requirement/impl/RequirementServiceImpl$1.class
 com/eagleeye/model/dto/CompetitorAnalysisResult.class
 com/eagleeye/model/vo/dashboard/PolicySummaryVO.class
 com/eagleeye/service/policy/impl/PolicyServiceImpl.class

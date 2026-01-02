@@ -10,6 +10,9 @@ import com.eagleeye.model.entity.CompetitorInfo;
 import com.eagleeye.model.entity.PolicyInfo;
 import com.eagleeye.model.entity.PolicyAnalysis;
 import com.eagleeye.model.entity.PolicySuggestion;
+import com.eagleeye.model.entity.CompetitorAnalysis;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.eagleeye.model.vo.AttachmentVO;
 import com.eagleeye.model.vo.RequirementDetailVO;
 import com.eagleeye.model.vo.RequirementVO;
@@ -18,6 +21,7 @@ import com.eagleeye.repository.PolicyRepository;
 import com.eagleeye.repository.PolicyAnalysisRepository;
 import com.eagleeye.repository.PolicySuggestionRepository;
 import com.eagleeye.repository.CompetitorRepository;
+import com.eagleeye.repository.CompetitorAnalysisRepository;
 import com.eagleeye.service.requirement.RequirementService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -50,6 +54,12 @@ public class RequirementServiceImpl implements RequirementService {
 
     @Resource
     private CompetitorRepository competitorRepository;
+
+    @Resource
+    private CompetitorAnalysisRepository competitorAnalysisRepository;
+
+    @Resource
+    private ObjectMapper objectMapper;
 
     @Override
     public Page<RequirementVO> listRequirements(RequirementQueryDTO queryDTO) {
@@ -240,37 +250,88 @@ public class RequirementServiceImpl implements RequirementService {
         if (competitorInfo == null) {
             return null;
         }
-        
+
+        // 获取竞品分析数据
+        LambdaQueryWrapper<CompetitorAnalysis> analysisWrapper = new LambdaQueryWrapper<>();
+        analysisWrapper.eq(CompetitorAnalysis::getCompetitorId, competitorId)
+                .eq(CompetitorAnalysis::getSortOrder, 1);
+        CompetitorAnalysis competitorAnalysis = competitorAnalysisRepository.selectOne(analysisWrapper);
+
         // 创建需求
         RequirementCreateDTO createDTO = new RequirementCreateDTO();
         createDTO.setTitle(competitorInfo.getTitle());
         createDTO.setSourceType("COMPETITOR");
         createDTO.setSourceId(competitorId);
-        
-        // 设置背景和描述
+
+        // 设置背景信息
         StringBuilder background = new StringBuilder();
         background.append("竞品公司：").append(competitorInfo.getCompany()).append("\n");
         background.append("动态类型：").append(competitorInfo.getType()).append("\n");
         background.append("抓取时间：").append(competitorInfo.getCaptureTime()).append("\n\n");
-        
+
         if (StringUtils.hasText(competitorInfo.getSummary())) {
             background.append("分析摘要：\n").append(competitorInfo.getSummary());
         }
-        
+
         createDTO.setBackground(background.toString());
-        
+
+        // 设置描述信息 - 参考政策转需求的结构化方式
         StringBuilder description = new StringBuilder();
-        description.append("根据竞品动态，需要关注以下内容：\n\n");
-        description.append(competitorInfo.getContent()).append("\n\n");
-        
-        if (StringUtils.hasText(competitorInfo.getRelatedInfo())) {
-            description.append("相关信息：\n").append(competitorInfo.getRelatedInfo());
+        description.append("竞品动态分析：\n\n");
+
+        // 市场影响分析
+        if (competitorAnalysis != null && StringUtils.hasText(competitorAnalysis.getMarketImpact())) {
+            description.append("市场影响：\n").append(competitorAnalysis.getMarketImpact()).append("\n\n");
+        } else if (StringUtils.hasText(competitorInfo.getMarketImpact())) {
+            description.append("市场影响：\n").append(competitorInfo.getMarketImpact()).append("\n\n");
         }
-        
+
+        // 竞争态势分析
+        if (competitorAnalysis != null && StringUtils.hasText(competitorAnalysis.getCompetitiveAnalysis())) {
+            description.append("竞争态势：\n").append(competitorAnalysis.getCompetitiveAnalysis()).append("\n\n");
+        } else if (StringUtils.hasText(competitorInfo.getRelatedInfo())) {
+            description.append("竞争态势：\n").append(competitorInfo.getRelatedInfo()).append("\n\n");
+        }
+
+        // 应对建议列表
+        description.append("应对建议：\n");
+
+        // 尝试从 competitor_analysis 的 our_suggestions JSON 字段解析建议
+        if (competitorAnalysis != null && StringUtils.hasText(competitorAnalysis.getOurSuggestions())) {
+            try {
+                java.util.List<com.eagleeye.model.dto.CompetitorAnalysisResult.Suggestion> suggestions =
+                        objectMapper.readValue(competitorAnalysis.getOurSuggestions(),
+                                new TypeReference<java.util.List<com.eagleeye.model.dto.CompetitorAnalysisResult.Suggestion>>() {});
+
+                if (!suggestions.isEmpty()) {
+                    for (int i = 0; i < suggestions.size(); i++) {
+                        com.eagleeye.model.dto.CompetitorAnalysisResult.Suggestion suggestion = suggestions.get(i);
+                        description.append(i + 1).append(". ").append(suggestion.getSuggestion()).append("\n");
+                        if (StringUtils.hasText(suggestion.getReason())) {
+                            description.append("   理由：").append(suggestion.getReason()).append("\n");
+                        }
+                    }
+                } else {
+                    description.append("1. 分析竞品动态对我方产品的影响\n");
+                    description.append("2. 评估是否需要调整产品策略\n");
+                    description.append("3. 制定相应的产品改进计划\n");
+                }
+            } catch (Exception e) {
+                // JSON 解析失败，使用默认建议
+                description.append("1. 分析竞品动态对我方产品的影响\n");
+                description.append("2. 评估是否需要调整产品策略\n");
+                description.append("3. 制定相应的产品改进计划\n");
+            }
+        } else {
+            description.append("1. 分析竞品动态对我方产品的影响\n");
+            description.append("2. 评估是否需要调整产品策略\n");
+            description.append("3. 制定相应的产品改进计划\n");
+        }
+
         createDTO.setDescription(description.toString());
         createDTO.setPriority("MEDIUM"); // 默认优先级为中
         createDTO.setStatus("NEW"); // 默认状态为新建
-        
+
         return createRequirement(createDTO);
     }
 

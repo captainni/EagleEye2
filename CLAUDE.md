@@ -262,10 +262,10 @@ python proxy-service/main.py &
 ### 7. 数据库清理命令
 ```bash
 # 清空任务日志表
-docker exec -i my-mysql mysql -ucaptain -p123456 eagleeye -e "DELETE FROM crawler_task_log;"
+docker exec my-mysql mysql --default-character-set=utf8mb4 -ucaptain -p123456 eagleeye -e "DELETE FROM crawler_task_log;"
 
 # 查询任务数量
-docker exec -i my-mysql mysql -ucaptain -p123456 eagleeye -e "SELECT COUNT(*) FROM crawler_task_log;"
+docker exec my-mysql mysql --default-character-set=utf8mb4 -ucaptain -p123456 eagleeye -e "SELECT COUNT(*) FROM crawler_task_log;"
 ```
 
 ---

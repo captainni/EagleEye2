@@ -51,6 +51,9 @@ public class CompetitorServiceImpl implements CompetitorService {
     
     @Autowired
     private CompetitorTagRepository competitorTagRepository;
+
+    @Autowired
+    private com.eagleeye.service.requirement.RequirementService requirementService;
     
     @Autowired
     private ObjectMapper objectMapper;
@@ -248,10 +251,8 @@ public class CompetitorServiceImpl implements CompetitorService {
     
     @Override
     public Long convertToRequirement(Long id, Long userId) {
-        // 这里实现将竞品动态转为需求的逻辑
-        // TODO: 实现实际的需求转化逻辑
-        // 暂时仅返回一个模拟的需求ID
-        return System.currentTimeMillis() % 1000 + 1000;
+        // 调用需求服务的实际转换逻辑
+        return requirementService.convertCompetitorToRequirement(id);
     }
     
     /**
