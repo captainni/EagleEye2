@@ -28,6 +28,11 @@ public class PolicyQueryDTO {
      * 重要程度
      */
     private String importance;
+
+    /**
+     * 相关度
+     */
+    private String relevance;
     
     /**
      * 相关领域

@@ -327,6 +327,7 @@ public class PolicyAnalysisServiceImpl implements PolicyAnalysisService {
         policyInfo.setContent(markdownContent);
         policyInfo.setPolicyType(result.getPolicyType());
         policyInfo.setImportance(result.getImportance());
+        policyInfo.setRelevance(result.getRelevance());  // 设置相关度
         policyInfo.setAreas(convertAreasToJson(result.getAreas()));
         policyInfo.setCreateTime(LocalDateTime.now());
         policyInfo.setUpdateTime(LocalDateTime.now());

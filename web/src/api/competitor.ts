@@ -34,10 +34,13 @@ export interface CompetitorQueryParams {
   keyword?: string;
   competitor?: string;
   type?: string;
+  captureStartTime?: string;  // 抓取时间范围
+  captureEndTime?: string;
   publishTimeStart?: string;
   publishTimeEnd?: string;
   tag?: string;
-  importance?: number;
+  importance?: string;  // 重要程度：高、中、低
+  relevance?: string;   // 相关度：高、中、低
   pageNum: number;
   pageSize: number;
 }

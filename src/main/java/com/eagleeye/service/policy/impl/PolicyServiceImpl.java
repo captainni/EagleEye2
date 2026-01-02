@@ -77,6 +77,11 @@ public class PolicyServiceImpl implements PolicyService {
         if (StringUtils.isNotBlank(queryDTO.getImportance())) {
             queryWrapper.eq(PolicyInfo::getImportance, queryDTO.getImportance());
         }
+
+        // 相关度过滤
+        if (StringUtils.isNotBlank(queryDTO.getRelevance())) {
+            queryWrapper.eq(PolicyInfo::getRelevance, queryDTO.getRelevance());
+        }
         
         // 相关领域过滤
         if (StringUtils.isNotBlank(queryDTO.getArea())) {
@@ -144,6 +149,7 @@ public class PolicyServiceImpl implements PolicyService {
         if (policyAnalysis != null) {
             policyDetailVO.setSummary(policyAnalysis.getSummary());
             policyDetailVO.setImpactAnalysis(policyAnalysis.getImpactAnalysis());
+            policyDetailVO.setRelevance(policyAnalysis.getRelevance());  // 设置相关度
             // 解析keyPoints JSON为List
             if (StringUtils.isNotBlank(policyAnalysis.getKeyPoints())) {
                 try {

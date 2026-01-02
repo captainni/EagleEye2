@@ -54,27 +54,18 @@ export const defaultQuickEntryData: QuickEntry[] = [
 ];
 
 // 筛选选项
-export const policySourceOptions = [
-  { label: '全部来源', value: '' },
-  { label: '人民银行', value: 'pbc' },
-  { label: '银保监会', value: 'cbirc' },
-  { label: '证监会', value: 'csrc' },
-  { label: '国务院', value: 'state_council' }
-];
-
-export const policyCategoryOptions = [
-  { label: '全部分类', value: '' },
-  { label: '信贷政策', value: 'credit' },
-  { label: '理财业务', value: 'wealth' },
-  { label: '支付结算', value: 'payment' },
-  { label: '金融科技', value: 'fintech' },
-  { label: '风险合规', value: 'compliance' }
-];
-
 export const policyImportanceOptions = [
   { label: '全部', value: '' },
-  { label: '重要', value: 'high' },
-  { label: '一般', value: 'normal' }
+  { label: '高', value: '高' },
+  { label: '中', value: '中' },
+  { label: '低', value: '低' }
+];
+
+export const policyRelevanceOptions = [
+  { label: '全部', value: '' },
+  { label: '高', value: '高' },
+  { label: '中', value: '中' },
+  { label: '低', value: '低' }
 ];
 
 export const requirementStatusOptions = [
@@ -127,6 +118,21 @@ export const competitorCategoryOptions = [
 
 // 竞品筛选选项（数组格式，用于 CompetitorFilter 组件）
 export const competitorTypeArray = ['全部类型', '国有大行', '股份制银行', '城商行', '互联网银行', '非银机构'];
-export const competitorTimeArray = ['全部时间', '最近一天', '最近一周', '最近一月'];
+export const competitorTimeArray = ['全部时间', '近7天', '近30天', '近90天'];
 export const competitorCategoryArray = ['全部分类', '产品更新', '营销活动', '财报数据', '战略调整'];
 export const competitorCompanyArray = ['全部机构', '工商银行', '建设银行', '农业银行', '中国银行', '招商银行', '浦发银行'];
+
+// 竞品重要度和相关度选项
+export const competitorImportanceOptions = [
+  { label: '全部', value: '' },
+  { label: '高', value: '高' },
+  { label: '中', value: '中' },
+  { label: '低', value: '低' }
+];
+
+export const competitorRelevanceOptions = [
+  { label: '全部', value: '' },
+  { label: '高', value: '高' },
+  { label: '中', value: '中' },
+  { label: '低', value: '低' }
+];

@@ -39,7 +39,17 @@ public class CompetitorQueryDTO {
      * 抓取结束时间
      */
     private LocalDateTime captureEndTime;
-    
+
+    /**
+     * 重要程度
+     */
+    private String importance;
+
+    /**
+     * 相关度
+     */
+    private String relevance;
+
     /**
      * 页码，从1开始
      */

@@ -44,9 +44,8 @@ const policies = ref([]);
 // 过滤条件
 const filters = reactive({
   keyword: '',
-  source: '',
-  category: '',
-  importance: ''
+  importance: '',
+  relevance: ''
 });
 
 // 加载政策数据
@@ -60,17 +59,9 @@ const loadPolicies = async () => {
     };
     
     // 添加筛选条件
-    if (filters.keyword) queryParams.title = filters.keyword;
-    if (filters.source) queryParams.source = filters.source;
-    // 根据后端API参数要求添加其他筛选条件
-    if (filters.importance) {
-      const importanceMap: Record<string, number> = {
-        '高': 3,
-        '中': 2,
-        '低': 1
-      };
-      queryParams.importance = importanceMap[filters.importance];
-    }
+    if (filters.keyword) queryParams.keyword = filters.keyword;
+    if (filters.importance) queryParams.importance = filters.importance;
+    if (filters.relevance) queryParams.relevance = filters.relevance;
     
     // 调用API获取数据
     const result = await getPolicyList(queryParams);

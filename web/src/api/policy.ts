@@ -37,6 +37,7 @@ export interface PolicyQueryParams {
   policyType?: string;
   source?: string;
   importance?: string; // 前端用字符串，传递给后端前可能需要转换
+  relevance?: string; // 相关度：高、中、低
   area?: string;
   publishStartTime?: string;
   publishEndTime?: string;

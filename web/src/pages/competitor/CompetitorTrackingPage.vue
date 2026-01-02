@@ -4,10 +4,8 @@
 
     <main class="max-w-[1440px] mx-auto px-6 pt-24 pb-12">
       <!-- 筛选与搜索区域 -->
-      <competitor-filter 
-        :competitor-options="competitorOptions"
-        :type-options="typeOptions"
-        :time-options="timeOptions"
+      <competitor-filter
+        :initial-filter="filters"
         @filter="handleFilter"
       />
 
@@ -15,7 +13,7 @@
       <competitor-list :competitors="competitors" :loading="loading" />
 
       <!-- 分页控件 -->
-      <competitor-pagination 
+      <competitor-pagination
         :total="total"
         :page-size="pageSize"
         :current-page="currentPage"
@@ -36,7 +34,7 @@ import CompetitorList from '../../components/competitor/CompetitorList.vue';
 import CompetitorPagination from '../../components/competitor/CompetitorPagination.vue';
 
 // 导入默认数据
-import { defaultUserData, competitorTypeArray, competitorTimeArray, competitorCompanyArray } from '@/utils/defaultData';
+import { defaultUserData } from '@/utils/defaultData';
 
 // 导入API服务
 import { getCompetitorList, CompetitorQueryParams } from '@/api/competitor';
@@ -49,17 +47,11 @@ const loading = ref(false);
 const competitors = ref([]);
 const userData = defaultUserData;
 
-// 筛选选项
-const competitorOptions = competitorCompanyArray;
-const typeOptions = competitorTypeArray;
-const timeOptions = competitorTimeArray;
-
 // 筛选条件
-const filterOptions = ref({
+const filters = reactive({
   keyword: '',
-  company: competitorOptions[0],
-  type: typeOptions[0],
-  time: timeOptions[0]
+  importance: '',
+  relevance: ''
 });
 
 // 加载竞品数据
@@ -73,47 +65,24 @@ const loadCompetitors = async () => {
     };
 
     // 添加筛选条件
-  if (filterOptions.value.keyword) {
-      queryParams.keyword = filterOptions.value.keyword;
-  }
-
-  if (filterOptions.value.company !== competitorOptions[0]) {
-      queryParams.competitor = filterOptions.value.company;
-  }
-
-  if (filterOptions.value.type !== typeOptions[0]) {
-      queryParams.type = filterOptions.value.type;
+    if (filters.keyword) {
+      queryParams.keyword = filters.keyword;
     }
 
-    // 根据timeOptions处理时间筛选
-    if (filterOptions.value.time !== timeOptions[0]) {
-      const now = new Date();
-      let startDate = new Date();
-      
-      switch (filterOptions.value.time) {
-        case '近7天':
-          startDate.setDate(now.getDate() - 7);
-          break;
-        case '近30天':
-          startDate.setDate(now.getDate() - 30);
-          break;
-        case '近90天':
-          startDate.setDate(now.getDate() - 90);
-          break;
-      }
-      
-      queryParams.publishTimeStart = startDate.toISOString().split('T')[0];
-      queryParams.publishTimeEnd = now.toISOString().split('T')[0];
+    if (filters.importance) {
+      queryParams.importance = filters.importance;
     }
-    
+
+    if (filters.relevance) {
+      queryParams.relevance = filters.relevance;
+    }
+
     // 调用API获取数据
     const result = await getCompetitorList(queryParams);
-    // result 现在是分页对象 { list, total, ... }
     if (result && typeof result === 'object') {
       competitors.value = result.list || [];
       total.value = result.total || 0;
     } else {
-      // 处理非预期响应格式
       console.warn('获取竞品列表响应格式不符预期:', result);
       competitors.value = [];
       total.value = 0;
@@ -128,20 +97,20 @@ const loadCompetitors = async () => {
 };
 
 // 处理筛选
-const handleFilter = (filters: any) => {
-  filterOptions.value = filters;
-  currentPage.value = 1; // 重置为第一页
-  loadCompetitors(); // 重新加载数据
+const handleFilter = (filterData: any) => {
+  Object.assign(filters, filterData);
+  currentPage.value = 1;
+  loadCompetitors();
 };
 
 // 处理分页
 const handlePageChange = (page: number) => {
   currentPage.value = page;
-  loadCompetitors(); // 重新加载数据
+  loadCompetitors();
 };
 
 // 组件挂载时加载数据
 onMounted(() => {
   loadCompetitors();
 });
-</script> 
+</script>

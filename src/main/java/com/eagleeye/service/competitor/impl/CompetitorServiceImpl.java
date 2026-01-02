@@ -285,6 +285,14 @@ public class CompetitorServiceImpl implements CompetitorService {
         if (queryDTO.getCaptureEndTime() != null) {
             queryWrapper.le(CompetitorInfo::getCaptureTime, queryDTO.getCaptureEndTime());
         }
+        // 重要程度筛选
+        if (StringUtils.isNotBlank(queryDTO.getImportance())) {
+            queryWrapper.eq(CompetitorInfo::getImportance, queryDTO.getImportance());
+        }
+        // 相关度筛选
+        if (StringUtils.isNotBlank(queryDTO.getRelevance())) {
+            queryWrapper.eq(CompetitorInfo::getRelevance, queryDTO.getRelevance());
+        }
         // 按抓取时间倒序排序
         queryWrapper.orderByDesc(CompetitorInfo::getCaptureTime);
         return queryWrapper;
