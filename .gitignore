@@ -2,6 +2,9 @@
 logs/
 *.log
 
+# 爬虫结果（临时文件）
+crawl_files/
+
 # Maven
 target/
 pom.xml.tag
