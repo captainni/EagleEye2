@@ -43,4 +43,12 @@ public interface CrawlerTaskLogService {
      * @return 日志详情
      */
     CrawlerTaskLogVO getByTaskId(String taskId);
+
+    /**
+     * 根据日志ID查询实体
+     *
+     * @param logId 日志ID
+     * @return 任务日志实体
+     */
+    CrawlerTaskLog getById(Long logId);
 } 

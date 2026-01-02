@@ -21,8 +21,8 @@ app = FastAPI(title="EagleEye2 Proxy", version="1.0.0")
 # 配置
 MCP_HTTP_URL = os.getenv("MCP_HTTP_URL", "http://localhost:3000/mcp")
 CRAWL_OUTPUT_DIR = os.getenv("CRAWL_OUTPUT_DIR", "/home/captain/projects/EagleEye2/crawl_files")
-CRAWL_TIMEOUT = int(os.getenv("CRAWL_TIMEOUT", "300"))  # 默认5分钟超时
-ANALYSIS_TIMEOUT = int(os.getenv("ANALYSIS_TIMEOUT", "300"))  # 默认5分钟超时
+CRAWL_TIMEOUT = int(os.getenv("CRAWL_TIMEOUT", "600"))  # 默认10分钟超时
+ANALYSIS_TIMEOUT = int(os.getenv("ANALYSIS_TIMEOUT", "600"))  # 默认10分钟超时
 
 # 日志目录
 LOG_DIR = Path("/home/captain/projects/EagleEye2/logs")
@@ -417,34 +417,37 @@ async def _crawl_with_skill(req: CrawlRequest):
 
     # 生成时间戳和短 taskId
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    claude_logger.info(f"收到的 taskId: '{req.taskId}', 长度: {len(req.taskId) if req.taskId else 0}")
     short_task_id = req.taskId[:8] if req.taskId and len(req.taskId) >= 8 else ""
+    claude_logger.info(f"提取的 short_task_id: '{short_task_id}', 长度: {len(short_task_id)}")
 
     # 构建具体文件夹名
     if short_task_id:
         target_folder = f"{timestamp}_{req.sourceName}_{short_task_id}"
-        prompt = f"""使用 eagleeye-crawler skill 爬取 {req.listUrl} 的最新{req.maxArticles}篇文章。
-
-**关键要求：必须使用这个文件夹名**
-文件夹名必须是：{target_folder}
-输出目录必须是：/home/captain/projects/EagleEye2/crawl_files/{target_folder}/
-
-来源标识：{req.sourceName}
-"""
     else:
         target_folder = f"{timestamp}_{req.sourceName}"
-        prompt = f"""使用 eagleeye-crawler skill 爬取 {req.listUrl} 的最新{req.maxArticles}篇文章。
 
-**关键要求：必须使用这个文件夹名**
-文件夹名必须是：{target_folder}
-输出目录必须是：/home/captain/projects/EagleEye2/crawl_files/{target_folder}/
+    output_dir = f"/home/captain/projects/EagleEye2/crawl_files/{target_folder}"
+    prompt = f"""使用 eagleeye-crawler skill 爬取文章。
 
-来源标识：{req.sourceName}
+参数（必须严格遵守）:
+--url {req.listUrl}
+--source {req.sourceName}
+--max {req.maxArticles}
+--output-dir {output_dir}
+
+重要：所有输出文件必须写入 --output-dir 指定的目录
 """
 
     claude_logger.info("=" * 50)
     claude_logger.info("开始爬虫任务")
     claude_logger.info(f"参数: listUrl={req.listUrl}, sourceName={req.sourceName}, maxArticles={req.maxArticles}")
     proxy_logger.info(f"收到爬虫请求: {req.sourceName}, {req.maxArticles}篇文章")
+
+    # 预先创建文件夹，确保文件夹名正确
+    import os
+    os.makedirs(output_dir, exist_ok=True)
+    claude_logger.info(f"已创建输出目录: {output_dir}")
 
     proc = None
     start_time = time.time()

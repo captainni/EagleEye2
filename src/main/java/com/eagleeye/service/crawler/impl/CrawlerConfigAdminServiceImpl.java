@@ -445,67 +445,17 @@ public class CrawlerConfigAdminServiceImpl extends ServiceImpl<CrawlerConfigRepo
             return new TriggerResult(false, null, "配置的 sourceUrls 为空");
         }
 
-        String listUrl = urls.get(0);
         String taskId = UUID.randomUUID().toString(true);
 
-        // 【新增】立即创建任务日志
-        CrawlerTaskLog taskLog = new CrawlerTaskLog();
-        taskLog.setTaskId(taskId);
-        taskLog.setConfigId(config.getConfigId());
-        taskLog.setTargetUrl(listUrl);
-        taskLog.setStartTime(LocalDateTime.now());
-        taskLog.setStatus("processing");
-
-        boolean logSaved = crawlerTaskLogService.saveTaskLog(taskLog);
-        if (!logSaved) {
-            log.warn("Failed to save initial task log for configId={}", config.getConfigId());
-        }
-
         try {
-            // 【修改】调用新的异步方法，传递 taskId
-            java.util.concurrent.CompletableFuture<EagleEyeCrawlerService.CrawlResult> future =
-                eagleEyeCrawlerService.triggerAsyncWithResult(config.getConfigId(), taskId, 3);
-
-            // 【新增】异步完成后更新日志
-            final Long taskLogId = taskLog.getLogId();
-            final Long configId = config.getConfigId();
-            future.thenAccept(result -> {
-                CrawlerTaskLog updateLog = new CrawlerTaskLog();
-                updateLog.setLogId(taskLogId);
-                updateLog.setEndTime(LocalDateTime.now());
-
-                if (result.getSuccess()) {
-                    updateLog.setStatus("success");
-                    updateLog.setBatchPath(result.getBatchPath());
-                    updateLog.setArticleCount(result.getArticleCount());
-                    updateLog.setCategoryStats(result.getCategoryStats());
-
-                    // 更新配置的 result_path
-                    CrawlerConfig configToUpdate = CrawlerConfigAdminServiceImpl.this.getOne(
-                            Wrappers.lambdaQuery(CrawlerConfig.class)
-                                    .eq(CrawlerConfig::getConfigId, configId)
-                    );
-                    if (configToUpdate != null) {
-                        configToUpdate.setResultPath(result.getBatchPath());
-                        configToUpdate.setUpdateTime(LocalDateTime.now());
-                        CrawlerConfigAdminServiceImpl.this.updateById(configToUpdate);
-                    }
-                } else {
-                    updateLog.setStatus("failure");
-                    updateLog.setErrorMessage(result.getErrorMessage());
-                }
-                crawlerTaskLogService.updateTaskLog(updateLog);
-            });
+            // 调用 triggerAsyncWithResult，由它负责创建和更新任务日志
+            eagleEyeCrawlerService.triggerAsyncWithResult(config.getConfigId(), taskId, 3);
 
             log.info("EagleEye 爬虫任务已提交: configId={}, taskId={}", config.getConfigId(), taskId);
             return new TriggerResult(true, taskId, "任务已提交，正在后台执行");
 
         } catch (Exception e) {
             log.error("EagleEye 爬虫服务调用失败: configId={}", config.getConfigId(), e);
-            taskLog.setEndTime(LocalDateTime.now());
-            taskLog.setStatus("failure");
-            taskLog.setErrorMessage("服务调用失败: " + e.getMessage());
-            crawlerTaskLogService.updateTaskLog(taskLog);
             return new TriggerResult(false, null, "服务调用失败: " + e.getMessage());
         }
     }

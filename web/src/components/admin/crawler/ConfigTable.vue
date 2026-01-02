@@ -60,17 +60,12 @@
                  <i class="fas fa-trash"></i>
                </el-button>
             </el-tooltip>
-            <el-tooltip :content="row.isActive ? '禁用' : '启用'" placement="top">
-              <el-button link :type="row.isActive ? 'warning' : 'success'" @click="$emit('toggleStatus', row.configId, !row.isActive)" class="p-1 text-xs">
-                <i :class="row.isActive ? 'fas fa-toggle-off' : 'fas fa-toggle-on'"></i>
-              </el-button>
-            </el-tooltip>
             <el-tooltip :content="getTriggerButtonTooltip(row)" placement="top">
                <el-button
                  link
                  :type="getTriggerButtonType(row)"
                  @click="handleTrigger(row)"
-                 :disabled="!row.isActive || isTaskRunning(row.configId)"
+                 :disabled="isTaskRunning(row.configId)"
                  class="p-1 text-xs trigger-button"
                  :class="{ 'spinning': isTaskRunning(row.configId) }"
                >

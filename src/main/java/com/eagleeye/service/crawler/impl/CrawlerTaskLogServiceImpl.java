@@ -136,4 +136,10 @@ public class CrawlerTaskLogServiceImpl extends ServiceImpl<CrawlerTaskLogReposit
                         CrawlerConfig::getTargetName
                 ));
     }
+
+    @Override
+    public CrawlerTaskLog getById(Long logId) {
+        // 委托给 MyBatis Plus ServiceImpl 的 getById 方法
+        return super.getById(logId);
+    }
 } 

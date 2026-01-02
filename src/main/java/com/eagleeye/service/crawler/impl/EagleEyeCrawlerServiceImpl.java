@@ -6,6 +6,7 @@ import com.eagleeye.model.entity.CrawlerTaskLog;
 import com.eagleeye.repository.CrawlerConfigRepository;
 import com.eagleeye.service.crawler.CrawlerTaskLogService;
 import com.eagleeye.service.crawler.EagleEyeCrawlerService;
+import com.eagleeye.util.CrawlerUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -197,58 +198,13 @@ public class EagleEyeCrawlerServiceImpl implements EagleEyeCrawlerService {
 
     /**
      * 从 URL 提取 sourceName
-     * 例如: https://bank.eastmoney.com/a/czzyh.html -> eastmoney_czzyh
-     * 例如: https://finance.eastmoney.com/a/20251226.html -> eastmoney_finance
-     * 例如: https://bank.jrj.com.cn/ -> jrj_bank
+     * 使用 CrawlerUtil.extractSourceNameFromUrl 统一处理
+     * 例如: https://bank.eastmoney.com/a/czzyh.html -> bank_eastmoney
+     * 例如: https://finance.eastmoney.com/a/20251226.html -> finance_eastmoney
+     * 例如: https://bank.jrj.com.cn/ -> bank_jrj
      */
     public String extractSourceNameFromUrl(String url) {
-        try {
-            // 移除协议前缀
-            String cleanUrl = url.replaceFirst("^https?://", "");
-
-            // 提取域名和路径
-            String[] parts = cleanUrl.split("/", 3);
-            if (parts.length < 2) {
-                return "unknown";
-            }
-
-            String domain = parts[0]; // bank.eastmoney.com
-            String path = parts.length > 1 ? parts[1] : ""; // /a or empty
-
-            // 从域名提取主域名 (例如: bank.eastmoney.com -> eastmoney)
-            String[] domainParts = domain.split("\\.");
-            String mainDomain = domainParts.length >= 2 ? domainParts[domainParts.length - 2] : domainParts[0];
-
-            // 从路径提取标识符 (例如: /a/czzyh.html -> czzyh)
-            String pathId = "";
-            if (!path.isEmpty()) {
-                // 获取路径的最后一部分，移除 .html 等扩展名
-                String[] pathParts = path.split("/");
-                for (String part : pathParts) {
-                    if (!part.isEmpty() && !part.matches("^\\d+$")) { // 跳过纯数字部分
-                        pathId = part.replaceAll("\\.[^.]+$", ""); // 移除扩展名
-                        if (pathId.length() > 2) { // 至少3个字符才使用
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // 如果没有有效的路径 ID，尝试使用域名的第一部分作为标识
-            if (pathId.isEmpty() || pathId.length() <= 2) {
-                if (domainParts.length > 2) {
-                    pathId = domainParts[0]; // 使用子域名 (例如: bank)
-                } else {
-                    pathId = "news"; // 默认标识
-                }
-            }
-
-            return mainDomain + "_" + pathId;
-
-        } catch (Exception e) {
-            logger.warn("从 URL 提取 sourceName 失败: {}, 使用默认值", url, e);
-            return "unknown_source";
-        }
+        return CrawlerUtil.extractSourceNameFromUrl(url);
     }
 
     @Override
@@ -291,6 +247,7 @@ public class EagleEyeCrawlerServiceImpl implements EagleEyeCrawlerService {
         taskLog.setTargetUrl(listUrl);
         taskLog.setStartTime(LocalDateTime.now());
         taskLog.setStatus("processing");
+        taskLog.setAnalysisStatus("pending");  // 设置初始分析状态
 
         boolean logSaved = crawlerTaskLogService.saveTaskLog(taskLog);
         if (!logSaved) {
@@ -307,19 +264,25 @@ public class EagleEyeCrawlerServiceImpl implements EagleEyeCrawlerService {
 
         CompletableFuture.runAsync(() -> {
             try {
-                // 调用同步爬虫方法
-                CrawlResult result = crawl(finalSourceName, finalListUrl, finalMaxArticles);
+                // 调用同步爬虫方法（带 taskId）
+                CrawlResult result = crawl(finalTaskId, finalSourceName, finalListUrl, finalMaxArticles);
 
-                // 更新任务日志
-                CrawlerTaskLog updateLog = new CrawlerTaskLog();
-                updateLog.setLogId(finalTaskLogId);
-                updateLog.setEndTime(LocalDateTime.now());
+                // 更新任务日志 - 先查询现有记录
+                CrawlerTaskLog existingLog = crawlerTaskLogService.getById(finalTaskLogId);
+                if (existingLog == null) {
+                    logger.error("无法找到任务日志记录: logId={}", finalTaskLogId);
+                    return;
+                }
+
+                existingLog.setEndTime(LocalDateTime.now());
+                existingLog.setUpdatedAt(LocalDateTime.now());
 
                 if (result.getSuccess()) {
-                    updateLog.setStatus("success");
-                    updateLog.setBatchPath(result.getBatchPath());
-                    updateLog.setArticleCount(result.getArticleCount());
-                    updateLog.setCategoryStats(result.getCategoryStats());
+                    existingLog.setStatus("success");
+                    existingLog.setAnalysisStatus("pending");  // 重置为待分析状态
+                    existingLog.setBatchPath(result.getBatchPath());
+                    existingLog.setArticleCount(result.getArticleCount());
+                    existingLog.setCategoryStats(result.getCategoryStats());
 
                     // 重新查询配置并更新 result_path（避免 lambda 中变量非 final 问题）
                     CrawlerConfig configToUpdate = crawlerConfigRepository.selectById(finalConfigId);
@@ -331,21 +294,29 @@ public class EagleEyeCrawlerServiceImpl implements EagleEyeCrawlerService {
 
                     logger.info("异步爬虫执行成功: taskId={}, batchPath={}", finalTaskId, result.getBatchPath());
                 } else {
-                    updateLog.setStatus("failure");
-                    updateLog.setErrorMessage(result.getErrorMessage());
+                    existingLog.setStatus("failure");
+                    existingLog.setErrorMessage(result.getErrorMessage());
+                    existingLog.setAnalysisStatus("failed");  // 失败时设置分析状态
                     logger.warn("异步爬虫执行失败: taskId={}, error={}", finalTaskId, result.getErrorMessage());
                 }
 
-                crawlerTaskLogService.updateTaskLog(updateLog);
+                crawlerTaskLogService.updateTaskLog(existingLog);
 
             } catch (Exception e) {
                 logger.error("异步爬虫执行异常: taskId={}", finalTaskId, e);
-                CrawlerTaskLog errorLog = new CrawlerTaskLog();
-                errorLog.setLogId(finalTaskLogId);
-                errorLog.setEndTime(LocalDateTime.now());
-                errorLog.setStatus("failure");
-                errorLog.setErrorMessage("执行异常: " + e.getMessage());
-                crawlerTaskLogService.updateTaskLog(errorLog);
+
+                // 先查询现有记录
+                CrawlerTaskLog existingLog = crawlerTaskLogService.getById(finalTaskLogId);
+                if (existingLog != null) {
+                    existingLog.setEndTime(LocalDateTime.now());
+                    existingLog.setUpdatedAt(LocalDateTime.now());
+                    existingLog.setStatus("failure");
+                    existingLog.setErrorMessage("执行异常: " + e.getMessage());
+                    existingLog.setAnalysisStatus("failed");  // 异常时设置分析状态
+                    crawlerTaskLogService.updateTaskLog(existingLog);
+                } else {
+                    logger.error("无法找到任务日志记录进行异常更新: logId={}", finalTaskLogId);
+                }
             }
         });
 
@@ -381,12 +352,66 @@ public class EagleEyeCrawlerServiceImpl implements EagleEyeCrawlerService {
         // 从 URL 提取 sourceName
         String sourceName = extractSourceNameFromUrl(listUrl);
 
+        // 创建任务日志
+        CrawlerTaskLog taskLog = new CrawlerTaskLog();
+        taskLog.setTaskId(taskId);
+        taskLog.setConfigId(configId);
+        taskLog.setTargetUrl(listUrl);
+        taskLog.setStartTime(LocalDateTime.now());
+        taskLog.setStatus("processing");
+        taskLog.setAnalysisStatus("pending");
+
+        boolean logSaved = crawlerTaskLogService.saveTaskLog(taskLog);
+        if (!logSaved) {
+            logger.warn("Failed to save initial task log for taskId={}", taskId);
+        }
+
         // 异步执行爬虫并返回结果
+        final Long finalConfigId = configId;
         final String finalSourceName = sourceName;
         final String finalListUrl = listUrl;
         final Integer finalMaxArticles = maxArticles;
+        final String finalTaskId = taskId;
+        final Long finalTaskLogId = taskLog.getLogId();
+
         return CompletableFuture.supplyAsync(() -> {
-            return crawl(finalSourceName, finalListUrl, finalMaxArticles);
+            CrawlResult result = crawl(finalTaskId, finalSourceName, finalListUrl, finalMaxArticles);
+
+            // 更新任务日志 - 先查询现有记录
+            CrawlerTaskLog existingLog = crawlerTaskLogService.getById(finalTaskLogId);
+            if (existingLog != null) {
+                existingLog.setEndTime(LocalDateTime.now());
+                existingLog.setUpdatedAt(LocalDateTime.now());
+
+                if (result.getSuccess()) {
+                    existingLog.setStatus("success");
+                    existingLog.setAnalysisStatus("pending");
+                    existingLog.setBatchPath(result.getBatchPath());
+                    existingLog.setArticleCount(result.getArticleCount());
+                    existingLog.setCategoryStats(result.getCategoryStats());
+
+                    // 更新配置的 result_path
+                    CrawlerConfig configToUpdate = crawlerConfigRepository.selectById(finalConfigId);
+                    if (configToUpdate != null) {
+                        configToUpdate.setResultPath(result.getBatchPath());
+                        configToUpdate.setUpdateTime(LocalDateTime.now());
+                        crawlerConfigRepository.updateById(configToUpdate);
+                    }
+
+                    logger.info("异步爬虫执行成功: taskId={}, batchPath={}", finalTaskId, result.getBatchPath());
+                } else {
+                    existingLog.setStatus("failure");
+                    existingLog.setErrorMessage(result.getErrorMessage());
+                    existingLog.setAnalysisStatus("failed");
+                    logger.warn("异步爬虫执行失败: taskId={}, error={}", finalTaskId, result.getErrorMessage());
+                }
+
+                crawlerTaskLogService.updateTaskLog(existingLog);
+            } else {
+                logger.error("无法找到任务日志记录: logId={}", finalTaskLogId);
+            }
+
+            return result;
         });
     }
 }
