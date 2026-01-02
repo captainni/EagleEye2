@@ -11,6 +11,7 @@ import com.eagleeye.model.entity.CompetitorSource;
 import com.eagleeye.model.entity.CompetitorTag;
 import com.eagleeye.model.vo.CompetitorDetailVO;
 import com.eagleeye.model.vo.CompetitorSourceVO;
+import com.eagleeye.model.vo.PolicySuggestionVO;
 import com.eagleeye.model.vo.CompetitorTagVO;
 import com.eagleeye.model.vo.CompetitorVO;
 import com.eagleeye.repository.CompetitorAnalysisRepository;
@@ -198,8 +199,25 @@ public class CompetitorServiceImpl implements CompetitorService {
             detailVO.setAnalysisAndSuggestions(analysisList.stream()
                     .map(CompetitorAnalysis::getContent)
                     .collect(Collectors.toList()));
+
+            // 解析并设置 ourSuggestions（应对建议列表）
+            if (StringUtils.isNotBlank(firstAnalysis.getOurSuggestions())) {
+                try {
+                    List<PolicySuggestionVO> suggestions = objectMapper.readValue(
+                            firstAnalysis.getOurSuggestions(),
+                            new TypeReference<List<PolicySuggestionVO>>(){}
+                    );
+                    detailVO.setOurSuggestions(suggestions);
+                } catch (Exception e) {
+                    log.error("解析 ourSuggestions 失败: {}", e.getMessage());
+                    detailVO.setOurSuggestions(new ArrayList<>());
+                }
+            } else {
+                detailVO.setOurSuggestions(new ArrayList<>());
+            }
         } else {
             detailVO.setAnalysisAndSuggestions(new ArrayList<>());
+            detailVO.setOurSuggestions(new ArrayList<>());
         }
 
         // 转换标签

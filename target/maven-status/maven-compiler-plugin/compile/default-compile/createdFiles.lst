@@ -112,6 +112,7 @@ com/eagleeye/model/vo/CompetitorVO.class
 com/eagleeye/model/dto/PolicyQueryDTO.class
 com/eagleeye/service/dashboard/DashboardService.class
 com/eagleeye/model/vo/dashboard/DashboardStatsVO.class
+com/eagleeye/service/competitor/impl/CompetitorServiceImpl$4.class
 com/eagleeye/repository/CompetitorSourceRepository.class
 com/eagleeye/model/entity/CompetitorInfo.class
 com/eagleeye/model/dto/ProductDTO.class

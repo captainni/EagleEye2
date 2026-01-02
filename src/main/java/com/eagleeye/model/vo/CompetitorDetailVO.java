@@ -1,6 +1,8 @@
 package com.eagleeye.model.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -77,6 +79,11 @@ public class CompetitorDetailVO {
      * 分析和建议列表
      */
     private List<String> analysisAndSuggestions;
+
+    /**
+     * 应对建议列表（来自 our_suggestions JSON 字段）
+     */
+    private List<PolicySuggestionVO> ourSuggestions;
 
     /**
      * 相关信息/详细说明

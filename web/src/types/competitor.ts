@@ -41,7 +41,8 @@ export interface CompetitorVO {
   keyPoints?: string[];         // 关键要点数组
   marketImpact?: string;        // 市场影响分析
   competitiveAnalysis?: string; // 竞争态势分析
-  ourSuggestions?: SuggestionVO[]; // 应对建议列表
+  ourSuggestions?: SuggestionVO[]; // 应对建议列表（后端 our_suggestions 字段）
+  analysisAndSuggestions?: string[]; // 分析摘要（已弃用，保留兼容）
 
   // 来源链接
   sources?: CompetitorSourceVO[];

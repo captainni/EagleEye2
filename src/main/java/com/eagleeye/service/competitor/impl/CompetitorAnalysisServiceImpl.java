@@ -5,9 +5,11 @@ import com.eagleeye.model.dto.CompetitorAnalysisResult;
 import com.eagleeye.model.entity.CrawlerTaskLog;
 import com.eagleeye.model.entity.CompetitorAnalysis;
 import com.eagleeye.model.entity.CompetitorInfo;
+import com.eagleeye.model.entity.CompetitorSource;
 import com.eagleeye.repository.CrawlerTaskLogRepository;
 import com.eagleeye.repository.CompetitorAnalysisRepository;
 import com.eagleeye.repository.CompetitorRepository;
+import com.eagleeye.repository.CompetitorSourceRepository;
 import com.eagleeye.service.competitor.CompetitorAnalysisService;
 import com.eagleeye.service.competitor.CompetitorAnalyzer;
 import com.eagleeye.service.settings.SettingsService;
@@ -50,6 +52,7 @@ public class CompetitorAnalysisServiceImpl implements CompetitorAnalysisService 
     private final CrawlerTaskLogRepository taskLogRepository;
     private final CompetitorRepository competitorRepository;
     private final CompetitorAnalysisRepository competitorAnalysisRepository;
+    private final CompetitorSourceRepository competitorSourceRepository;
     private final SettingsService settingsService;
 
     public CompetitorAnalysisServiceImpl(
@@ -57,11 +60,13 @@ public class CompetitorAnalysisServiceImpl implements CompetitorAnalysisService 
             CrawlerTaskLogRepository taskLogRepository,
             CompetitorRepository competitorRepository,
             CompetitorAnalysisRepository competitorAnalysisRepository,
+            CompetitorSourceRepository competitorSourceRepository,
             SettingsService settingsService) {
         this.competitorAnalyzer = competitorAnalyzer;
         this.taskLogRepository = taskLogRepository;
         this.competitorRepository = competitorRepository;
         this.competitorAnalysisRepository = competitorAnalysisRepository;
+        this.competitorSourceRepository = competitorSourceRepository;
         this.settingsService = settingsService;
     }
 
@@ -322,7 +327,12 @@ public class CompetitorAnalysisServiceImpl implements CompetitorAnalysisService 
         competitorInfo.setRelatedInfo(result.getCompetitiveAnalysis());
         competitorInfo.setUpdateTime(LocalDateTime.now());
 
-        competitorRepository.updateById(competitorInfo);
+        // 根据 competitorId 是否存在来判断是插入还是更新
+        if (competitorInfo.getId() != null) {
+            competitorRepository.updateById(competitorInfo);
+        } else {
+            competitorRepository.insert(competitorInfo);
+        }
         Long competitorId = competitorInfo.getId();
 
         // 2. 保存 CompetitorAnalysis（存储详细分析结果）
@@ -336,21 +346,42 @@ public class CompetitorAnalysisServiceImpl implements CompetitorAnalysisService 
         competitorAnalysis.setOurSuggestions(convertSuggestionsToJson(result.getOurSuggestions()));
 
         // content 字段保留作为整合的摘要
+        // 注意：TEXT 类型最大 65535 字节，需要截断以避免 Data truncation 错误
+        // 由于 market_impact、competitive_analysis、our_suggestions 已分别存储，这里只保留简短摘要
         StringBuilder contentBuilder = new StringBuilder();
-        if (result.getMarketImpact() != null) {
-            contentBuilder.append("## 市场影响\n\n").append(result.getMarketImpact()).append("\n\n");
+        if (result.getMarketImpact() != null && !result.getMarketImpact().isEmpty()) {
+            // 市场影响截取前 500 字符
+            String impact = result.getMarketImpact();
+            if (impact.length() > 500) {
+                impact = impact.substring(0, 500) + "...";
+            }
+            contentBuilder.append("## 市场影响\n\n").append(impact).append("\n\n");
         }
-        if (result.getCompetitiveAnalysis() != null) {
-            contentBuilder.append("## 竞争态势\n\n").append(result.getCompetitiveAnalysis()).append("\n\n");
+        if (result.getCompetitiveAnalysis() != null && !result.getCompetitiveAnalysis().isEmpty()) {
+            // 竞争态势截取前 500 字符
+            String analysis = result.getCompetitiveAnalysis();
+            if (analysis.length() > 500) {
+                analysis = analysis.substring(0, 500) + "...";
+            }
+            contentBuilder.append("## 竞争态势\n\n").append(analysis).append("\n\n");
         }
         if (result.getOurSuggestions() != null && !result.getOurSuggestions().isEmpty()) {
             contentBuilder.append("## 应对建议\n\n");
             for (CompetitorAnalysisResult.Suggestion suggestion : result.getOurSuggestions()) {
-                contentBuilder.append("- **建议**: ").append(suggestion.getSuggestion()).append("\n");
-                contentBuilder.append("  **理由**: ").append(suggestion.getReason()).append("\n\n");
+                // 建议截取前 100 字符
+                String suggestionText = suggestion.getSuggestion();
+                if (suggestionText.length() > 100) {
+                    suggestionText = suggestionText.substring(0, 100) + "...";
+                }
+                contentBuilder.append("- **建议**: ").append(suggestionText).append("\n");
             }
         }
-        competitorAnalysis.setContent(contentBuilder.toString());
+        // 最终内容截断到 10000 字符以内（确保安全）
+        String fullContent = contentBuilder.toString();
+        if (fullContent.length() > 10000) {
+            fullContent = fullContent.substring(0, 10000) + "\n\n...(内容过长，已截断)";
+        }
+        competitorAnalysis.setContent(fullContent);
 
         competitorAnalysis.setSortOrder(1);
         competitorAnalysis.setUpdateTime(LocalDateTime.now());
@@ -378,7 +409,43 @@ public class CompetitorAnalysisServiceImpl implements CompetitorAnalysisService 
             competitorAnalysisRepository.insert(competitorAnalysis);
         }
 
+        // 3. 保存 CompetitorSource（来源链接）
+        saveCompetitorSource(competitorId, sourceUrl, markdownContent);
+
         log.info("竞品分析结果已保存: competitorId={}", competitorId);
+    }
+
+    /**
+     * 保存竞品来源链接
+     */
+    private void saveCompetitorSource(Long competitorId, String sourceUrl, String markdownContent) {
+        if (sourceUrl == null || sourceUrl.isEmpty()) {
+            log.debug("sourceUrl 为空，跳过保存 CompetitorSource");
+            return;
+        }
+
+        // 检查是否已存在相同的来源链接
+        LambdaQueryWrapper<CompetitorSource> sourceWrapper = new LambdaQueryWrapper<>();
+        sourceWrapper.eq(CompetitorSource::getCompetitorId, competitorId)
+                .eq(CompetitorSource::getUrl, sourceUrl);
+        CompetitorSource existingSource = competitorSourceRepository.selectOne(sourceWrapper);
+
+        if (existingSource != null) {
+            log.debug("CompetitorSource 已存在，跳过插入: competitorId={}, url={}", competitorId, sourceUrl);
+            return;
+        }
+
+        // 创建新的来源链接记录
+        CompetitorSource competitorSource = new CompetitorSource();
+        competitorSource.setCompetitorId(competitorId);
+        competitorSource.setTitle(extractTitle(markdownContent)); // 使用文章标题
+        competitorSource.setUrl(sourceUrl);
+        competitorSource.setSortOrder(1);
+        competitorSource.setCreateTime(LocalDateTime.now());
+        competitorSource.setUpdateTime(LocalDateTime.now());
+
+        competitorSourceRepository.insert(competitorSource);
+        log.info("CompetitorSource 已保存: competitorId={}, url={}", competitorId, sourceUrl);
     }
 
     /**

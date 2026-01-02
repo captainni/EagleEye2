@@ -61,12 +61,23 @@
     </div>
 
     <!-- 分析摘要与建议 -->
-    <div class="mb-8 p-4 bg-orange-50 border-l-4 border-warning rounded-r-md">
+    <div v-if="competitor.analysisAndSuggestions && competitor.analysisAndSuggestions.length > 0" class="mb-8 p-4 bg-orange-50 border-l-4 border-warning rounded-r-md">
       <h4 class="text-base font-semibold text-warning mb-2">分析摘要与建议：</h4>
       <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
         <li v-for="(suggestion, index) in competitor.analysisAndSuggestions" :key="index"
             v-html="renderMarkdown(suggestion)"
             class="leading-relaxed"></li>
+      </ul>
+    </div>
+
+    <!-- 核心建议点 -->
+    <div v-if="competitor.ourSuggestions && competitor.ourSuggestions.length > 0" class="mb-8 p-4 bg-blue-50 border-l-4 border-primary rounded-r-md">
+      <h4 class="text-base font-semibold text-primary mb-2">核心建议点：</h4>
+      <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+        <li v-for="(suggestion, index) in competitor.ourSuggestions" :key="suggestion.id || index">
+          {{ suggestion.suggestion }}
+          <p v-if="suggestion.reason" class="text-xs text-gray-500 pl-4 mt-1">理由：{{ suggestion.reason }}</p>
+        </li>
       </ul>
     </div>
 

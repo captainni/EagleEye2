@@ -1,0 +1,40 @@
+{
+  "batchId": "20260102_130217_com_bank",
+  "source": "金融界",
+  "sourceUrl": "https://bank.jrj.com.cn/",
+  "sourceName": "com_bank",
+  "crawlTime": "2026-01-02T13:02:17",
+  "articleCount": 3,
+  "articles": [
+    {
+      "index": 1,
+      "title": "支持个人信用重塑！央行发布一次性信用修复政策，细则详解",
+      "filename": "01_政策_央行发布一次性信用修复政策.md",
+      "url": "https://m.jrj.com.cn/madapter/bank/2025/12/22090454743898.shtml",
+      "category": "policy",
+      "publishTime": "2025-12-22T09:04:14",
+      "author": "金融界",
+      "tags": ["央行", "信用修复", "征信政策", "金融监管"]
+    },
+    {
+      "index": 2,
+      "title": "年底银行'花式揽储'：存100万获500元微信立减金，3年期定存利率达1.75%",
+      "filename": "02_竞品_年底银行花式揽储.md",
+      "url": "https://m.jrj.com.cn/madapter/bank/2025/12/26085554781848.shtml",
+      "category": "competitor",
+      "publishTime": "2025-12-26T08:55:00",
+      "author": "时代周报",
+      "tags": ["银行揽储", "存款利率", "结构性存款", "养老金市场"]
+    },
+    {
+      "index": 3,
+      "title": "摩尔线程引爆科创板，来时路上的危渡逢舟",
+      "filename": "03_竞品_摩尔线程科创板上市浦发银行金融支持.md",
+      "url": "https://m.jrj.com.cn/madapter/bank/2025/12/08174554630582.shtml",
+      "category": "competitor",
+      "publishTime": "2025-12-08T17:45:00",
+      "author": "金融界",
+      "tags": ["浦发银行", "摩尔线程", "科创板", "科技金融", "GPU芯片"]
+    }
+  ]
+}
