@@ -127,15 +127,35 @@ public class EagleEyeCrawlerServiceImpl implements EagleEyeCrawlerService {
     private CrawlResult extractFromResult(String result) {
         try {
             // 提取批次路径 (格式: crawl_files/20251228_100307_eastmoney_bank/)
+            // 改进的解析逻辑：处理 skill 输出中的各种分隔符（空格、换行、反引号等）
             String batchPath = null;
             int pathIndex = result.indexOf("crawl_files/");
             if (pathIndex != -1) {
-                int endIndex = result.indexOf("/", pathIndex + 20);
-                if (endIndex != -1) {
-                    batchPath = result.substring(pathIndex, endIndex + 1);
-                } else {
-                    batchPath = result.substring(pathIndex).trim() + "/";
+                int startIndex = pathIndex;
+                int endIndex = startIndex;
+                int maxLen = Math.min(result.length(), startIndex + 100); // 限制最大长度防止越界
+
+                // 找到路径的结束位置：遇到空格、换行、反引号等分隔符时停止
+                while (endIndex < maxLen) {
+                    char c = result.charAt(endIndex);
+                    if (Character.isWhitespace(c) || c == '`' || c == '"' || c == '\'' || c == '\n' || c == '\r') {
+                        break;
+                    }
+                    endIndex++;
                 }
+
+                if (endIndex > startIndex) {
+                    batchPath = result.substring(startIndex, endIndex).trim();
+                    // 确保路径以 "/" 结尾
+                    if (!batchPath.endsWith("/")) {
+                        batchPath += "/";
+                    }
+                    logger.info("提取到批次路径: {}", batchPath);
+                } else {
+                    logger.warn("路径提取失败：startIndex={}, endIndex={}", startIndex, endIndex);
+                }
+            } else {
+                logger.warn("未找到 crawl_files/ 路径前缀");
             }
 
             // 优先从 metadata.json 读取文章数量

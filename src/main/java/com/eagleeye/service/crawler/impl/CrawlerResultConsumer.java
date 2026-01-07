@@ -4,7 +4,8 @@ import com.eagleeye.model.entity.CrawlerTaskLog;
 import com.eagleeye.repository.CrawlerTaskLogRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
+// RabbitMQ 相关功能已注释，当前项目未使用 MQ
+// import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,10 +16,14 @@ import java.util.Map;
 /**
  * 爬虫结果消费者，监听来自爬虫服务的消息
  *
+ * 注意：当前项目未使用 RabbitMQ，此类已禁用
+ *
  * @author eagleeye
+ * @deprecated RabbitMQ 功能已注释，此类不再使用
  */
 @Slf4j
-@Component
+// @Component  // 注释掉组件注册，禁用 RabbitMQ 消费者
+@Deprecated
 public class CrawlerResultConsumer {
 
     @Resource
@@ -35,7 +40,7 @@ public class CrawlerResultConsumer {
      * @param message 消息内容
      */
     @Transactional
-    @RabbitListener(queues = RESULT_QUEUE_NAME)
+    // @RabbitListener(queues = RESULT_QUEUE_NAME)  // 注释掉 RabbitMQ 监听器
     public void consumeResult(Map<String, Object> message) {
         try {
             log.info("Received crawler result: {}", message);

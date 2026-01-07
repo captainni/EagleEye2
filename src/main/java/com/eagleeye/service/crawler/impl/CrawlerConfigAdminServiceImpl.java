@@ -22,7 +22,8 @@ import com.eagleeye.util.CrawlerUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+// RabbitMQ 相关功能已注释，当前项目未使用 MQ
+// import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -40,8 +41,9 @@ import java.util.stream.Collectors;
 @Service
 public class CrawlerConfigAdminServiceImpl extends ServiceImpl<CrawlerConfigRepository, CrawlerConfig> implements CrawlerConfigAdminService {
 
-    @Resource
-    private RabbitTemplate rabbitTemplate; // 用于发送MQ消息
+    // RabbitMQ 相关功能已注释，当前项目未使用 MQ
+    // @Resource
+    // private RabbitTemplate rabbitTemplate; // 用于发送MQ消息
 
     @Resource
     private CrawlerTaskLogService crawlerTaskLogService; // 添加任务日志服务
@@ -406,23 +408,28 @@ public class CrawlerConfigAdminServiceImpl extends ServiceImpl<CrawlerConfigRepo
             log.warn("Failed to save initial task log for taskId={}", taskId);
         }
 
+        // RabbitMQ 相关功能已注释，当前项目未使用 MQ
         // 发送消息到 RabbitMQ
-        try {
-            rabbitTemplate.convertAndSend(TASK_QUEUE_NAME, taskMessage);
-            log.info("成功发送传统爬虫任务到队列: configId={}", config.getConfigId());
-            return true;
-        } catch (Exception e) {
-            log.error("发送传统爬虫任务失败: configId={}", config.getConfigId(), e);
+        // try {
+        //     rabbitTemplate.convertAndSend(TASK_QUEUE_NAME, taskMessage);
+        //     log.info("成功发送传统爬虫任务到队列: configId={}", config.getConfigId());
+        //     return true;
+        // } catch (Exception e) {
+        //     log.error("发送传统爬虫任务失败: configId={}", config.getConfigId(), e);
+        //
+        //     if (logSaved) {
+        //         taskLog.setEndTime(LocalDateTime.now());
+        //         taskLog.setStatus("failure");
+        //         taskLog.setErrorMessage("发送到 MQ 失败: " + e.getMessage());
+        //         crawlerTaskLogService.updateTaskLog(taskLog);
+        //     }
+        //
+        //     return false;
+        // }
 
-            if (logSaved) {
-                taskLog.setEndTime(LocalDateTime.now());
-                taskLog.setStatus("failure");
-                taskLog.setErrorMessage("发送到 MQ 失败: " + e.getMessage());
-                crawlerTaskLogService.updateTaskLog(taskLog);
-            }
-
-            return false;
-        }
+        // RabbitMQ 功能已禁用，直接返回失败
+        log.warn("RabbitMQ 功能已禁用，triggerLegacyCrawler 不再可用: configId={}", config.getConfigId());
+        return false;
     }
 
     /**

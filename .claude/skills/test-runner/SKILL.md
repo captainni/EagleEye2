@@ -1,6 +1,6 @@
 ---
 name: test-runner
-description: 自动化 EagleEye2 测试环境准备和浏览器测试流程。当用户说"测试"、"清理环境测试"、"重启测试"、"帮我测一下"等触发时使用。一键完成清空任务日志、清空日志文件、重启所有服务，然后使用 Playwright MCP 工具进行浏览器测试。
+description: 自动化 EagleEye2 测试环境准备和浏览器测试流程。当用户说"测试"、"清理环境测试"、"重启测试"、"帮我测一下"等触发时使用。一键完成清空任务日志、清空日志文件、重启所有服务，然后使用 Dev Browser 技能进行浏览器自动化测试。
 ---
 
 # Test Runner
@@ -47,32 +47,134 @@ description: 自动化 EagleEye2 测试环境准备和浏览器测试流程。�
 - 数据流转验证
 - 业务逻辑正确性检查
 
-## 测试方式
+### 5. 完整爬取分析端到端测试
+**场景：触发爬虫 → 监控执行 → 智能分析 → 验证结果**
 
-### 默认方式：Playwright MCP 工具
+详细步骤请参考 `references/test_scenarios.md` 中的 "完整爬取分析端到端测试" 章节。
 
-使用 Playwright MCP 系列工具直接操作浏览器：
+**测试流程概览**：
+1. 在爬虫管理 → 配置管理中点击"金融界银行动态"的【立即触发】
+2. 切换到任务监控，观察爬取执行状态，监控日志
+3. 爬取完成后，点击【智能分析】按钮，等待分析完成
+4. 验证监管政策/竞品动态页面是否有新卡片生成
+5. 检查卡片详情的完整性和准确性
+
+## 浏览器自动化测试
+
+本技能使用 **Dev Browser Skill** 进行浏览器自动化测试。
+
+### 启动 Dev Browser 服务器
 
 ```bash
-# 导航到前端
-mcp__playwright__browser_navigate --url "http://localhost:8088"
+# 方式1：如果已在 dev-browser 安装目录
+./server.sh &
 
-# 获取页面快照
-mcp__playwright__browser_snapshot
-
-# 点击元素
-mcp__playwright__browser_click --element "登录按钮" --ref "xxx"
-
-# 填写表单
-mcp__playwright__browser_type --element "用户名" --ref "xxx" --text "admin"
-
-# 截图
-mcp__playwright__browser_take_screenshot
+# 方式2：从任意位置启动（指定版本号）
+cd ~/.claude/plugins/cache/dev-browser-marketplace/dev-browser/66682fb0513a/skills/dev-browser
+./server.sh &
 ```
 
-### 用户指定时：Dev Browser 技能
+等待看到 `Ready` 消息后即可开始编写测试脚本。
 
-当用户明确说"用dev browser"、"使用dev browser技能"等关键词时，参考 `CLAUDE.md` 中的 **Dev Browser** 章节，使用 dev-browser 技能控制 Windows Chrome 浏览器。
+### 编写测试脚本
+
+所有脚本需在 `skills/dev-browser/` 目录下执行，使用 `@/` 导入别名：
+
+```bash
+cd ~/.claude/plugins/cache/dev-browser-marketplace/dev-browser/66682fb0513a/skills/dev-browser
+
+npx tsx <<'EOF'
+import { connect, waitForPageLoad } from "@/client.js";
+
+const client = await connect();
+const page = await client.page("eagleeye-test", { viewport: { width: 1920, height: 1080 } });
+
+// 导航到页面
+await page.goto("http://localhost:8088");
+await waitForPageLoad(page);
+
+// 点击元素
+await page.evaluate(() => {
+  const link = Array.from(document.querySelectorAll('a')).find(l => l.textContent.includes('爬虫管理'));
+  if (link) link.click();
+});
+
+// 等待并截图
+await page.waitForTimeout(2000);
+await page.screenshot({ path: "/tmp/screenshot.png" });
+
+// 获取页面信息
+const title = await page.title();
+console.log("Page Title:", title);
+
+await client.disconnect();
+EOF
+```
+
+### 常用操作
+
+**导航页面**
+```typescript
+await page.goto("http://localhost:8088/admin/crawler");
+await page.waitForTimeout(2000); // 等待页面加载
+```
+
+**点击元素**
+```typescript
+await page.evaluate(() => {
+  const buttons = Array.from(document.querySelectorAll('button'));
+  const targetBtn = buttons.find(b => b.textContent.includes('立即触发'));
+  if (targetBtn) targetBtn.click();
+});
+```
+
+**填写表单**
+```typescript
+await page.evaluate((text) => {
+  const input = document.querySelector('input[type="text"]');
+  if (input) {
+    input.value = text;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}, '搜索关键词');
+```
+
+**获取页面内容**
+```typescript
+const content = await page.evaluate(() => {
+  return document.body.textContent?.slice(0, 500);
+});
+console.log(content);
+```
+
+**截图**
+```typescript
+await page.screenshot({ path: "/tmp/page.png" });       // 整页截图
+await page.screenshot({ path: "/tmp/full.png", fullPage: true }); // 完整页面
+```
+
+**轮询等待状态**
+```typescript
+for (let i = 0; i < 20; i++) {
+  await page.reload();
+  await page.waitForTimeout(3000);
+
+  const status = await page.evaluate(() => {
+    // 检查页面状态
+    return document.body.textContent?.includes('已完成');
+  });
+
+  if (status) break;
+}
+```
+
+### 核心原则
+
+1. **小脚本原则**：每个脚本只做一件事
+2. **状态保持**：页面状态在脚本间保持
+3. **描述性命名**：使用有意义的页面名称如 `"login"`, `"crawler-monitor"`
+4. **记得断开**：`await client.disconnect()` - 页面会持久化
+5. **浏览器上下文**：`page.evaluate()` 中运行的是纯 JavaScript
 
 ## 服务地址
 
