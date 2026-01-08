@@ -229,7 +229,7 @@ export async function triggerReAnalyze(taskId: string): Promise<string> {
 }
 
 // POST /v1/admin/crawler/tasks/{taskId}/re-crawl
-// 基于任务重新爬取（更新原任务）
+// 基于任务重新抓取（更新原任务）
 export interface ReCrawlResult {
   taskId?: string;
   message: string;

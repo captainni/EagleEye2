@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="flex justify-between items-center mb-4">
-      <h3 class="text-lg font-semibold text-gray-700">爬虫配置列表</h3>
+      <h3 class="text-lg font-semibold text-gray-700">配置列表</h3>
       <el-button type="primary" @click="openAddModal" class="!rounded-button">
         <i class="fas fa-plus mr-2"></i>新增配置
       </el-button>
@@ -320,7 +320,7 @@ const handleTrigger = async (configId: number) => {
               runningTaskIds.value = runningTaskIds.value.filter(id => id !== configId);
               completedTaskIds.value = [...completedTaskIds.value, configId];
 
-              ElMessage.success(`爬取完成！成功爬取 ${status.articleCount || 0} 篇文章`);
+              ElMessage.success(`抓取完成！成功抓取 ${status.articleCount || 0} 篇文章`);
               // 刷新列表以更新 resultPath
               fetchConfigs();
 
@@ -332,7 +332,7 @@ const handleTrigger = async (configId: number) => {
               clearInterval(pollInterval);
               // 从运行中移除
               runningTaskIds.value = runningTaskIds.value.filter(id => id !== configId);
-              ElMessage.error(`爬取失败: ${status.errorMessage || '未知错误'}`);
+              ElMessage.error(`抓取失败: ${status.errorMessage || '未知错误'}`);
             } else if (pollCount >= maxPolls) {
               clearInterval(pollInterval);
               // 从运行中移除

@@ -196,18 +196,18 @@ const handleRetry = async (taskId: string) => {
   }
 };
 
-// 处理再爬取
+// 处理再抓取
 const handleReCrawl = async (taskId: string) => {
   try {
-    ElMessage.info('正在重新爬取...');
+    ElMessage.info('正在重新抓取...');
     await reCrawlTask(taskId);
 
-    ElMessage.success('任务已重新爬取');
+    ElMessage.success('任务已重新抓取');
     // 刷新列表
     fetchTasks();
   } catch (error: any) {
     console.error('Failed to re-crawl:', error);
-    ElMessage.error(error?.message || error?.msg || '再爬取失败');
+    ElMessage.error(error?.message || error?.msg || '再抓取失败');
   }
 };
 

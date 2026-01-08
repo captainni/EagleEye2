@@ -60,7 +60,7 @@ const menuItems: Menu[] = [
   { title: '竞品动态', path: '/competitor-tracking' },
   { title: '需求池', path: '/requirement-pool' },
   { title: '设置中心', path: '/settings' },
-  { title: '爬虫管理', path: '/admin/crawler' },
+  { title: '后端管理', path: '/admin/crawler' },
 ];
 </script>
 

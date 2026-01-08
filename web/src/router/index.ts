@@ -87,7 +87,7 @@ const routes: Array<RouteRecordRaw> = [
     name: 'AdminCrawlerManagement',
     component: () => import('@/pages/admin/crawler/index.vue'),
     meta: {
-      title: '爬虫管理',
+      title: '后端管理',
       requiresAuth: true,
       roles: ['admin']
     }

@@ -141,10 +141,10 @@ const isTaskCompleted = (configId: number): boolean => {
 
 const getTriggerButtonTooltip = (row: CrawlerConfigVO): string => {
   if (isTaskRunning(row.configId)) {
-    return '正在爬取中...';
+    return '正在抓取中...';
   }
   if (isTaskCompleted(row.configId)) {
-    return '爬取完成';
+    return '抓取完成';
   }
   return '立即触发';
 };

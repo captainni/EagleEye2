@@ -3,8 +3,6 @@
     <NavBar :active-menu="activeMenu" :user="mockUser" />
     <div class="max-w-[1440px] mx-auto px-6 pt-24 pb-12">
 
-      <h2 class="text-2xl font-semibold text-gray-800 mb-6">爬虫系统管理</h2>
-
       <!-- Tabs Navigation -->
       <el-tabs v-model="activeTab" class="admin-crawler-tabs" @tab-click="handleTabClick">
         <el-tab-pane label="配置管理" name="config"></el-tab-pane>

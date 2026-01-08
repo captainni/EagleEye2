@@ -26,7 +26,7 @@
 
       <el-table-column prop="endTime" label="结束时间" width="180" />
 
-      <el-table-column prop="status" label="爬取状态" min-width="100">
+      <el-table-column prop="status" label="抓取状态" min-width="100">
         <template #default="{ row }">
            <el-tag
              v-if="row.status === 'processing'"
@@ -87,7 +87,7 @@
       <el-table-column label="操作" width="200" fixed="right">
         <template #default="{ row }">
           <div class="space-x-2 whitespace-nowrap flex items-center">
-            <!-- 成功 + 未分析：智能分析按钮 + 再爬取 -->
+            <!-- 成功 + 未分析：智能分析按钮 + 再抓取 -->
             <template v-if="canAnalyze(row) && row.analysisStatus === 'pending'">
               <el-button link type="primary" @click="handleSmartAnalyze(row)" class="p-1 text-xs">
                 <i :class="getAnalyzeIcon(row)"></i> {{ getAnalyzeButtonText(row) }}
@@ -102,7 +102,7 @@
               </el-button>
             </template>
 
-            <!-- 成功 + 分析中：禁用状态 + 再爬取 -->
+            <!-- 成功 + 分析中：禁用状态 + 再抓取 -->
             <template v-if="canAnalyze(row) && row.analysisStatus === 'analyzing'">
               <el-button disabled link class="p-1 text-xs">
                 <i class="fas fa-brain fa-pulse"></i> 分析中...
@@ -117,7 +117,7 @@
               </el-button>
             </template>
 
-            <!-- 成功 + 已完成：再分析 + 再爬取 -->
+            <!-- 成功 + 已完成：再分析 + 再抓取 -->
             <template v-if="canAnalyze(row) && row.analysisStatus === 'completed'">
               <el-button
                 link
@@ -138,7 +138,7 @@
               </el-button>
             </template>
 
-            <!-- 失败：重新执行 + 再爬取 -->
+            <!-- 失败：重新执行 + 再抓取 -->
             <template v-if="row.status === 'failed'">
               <el-button link type="warning" @click="handleRetry(row)" class="p-1 text-xs">
                 <i class="fas fa-redo-alt"></i> 重新执行
@@ -253,7 +253,7 @@ const getReAnalyzeText = (row: CrawlerTaskLogVO): string => {
   return '再分析';
 };
 
-// 获取再爬取按钮图标
+// 获取再抓取按钮图标
 const getReCrawlIcon = (row: CrawlerTaskLogVO): string => {
   if (row.status === 'processing') {
     return 'fas fa-circle-notch fa-spin';
@@ -261,12 +261,12 @@ const getReCrawlIcon = (row: CrawlerTaskLogVO): string => {
   return 'fas fa-sync';
 };
 
-// 获取再爬取按钮文本
+// 获取再抓取按钮文本
 const getReCrawlText = (row: CrawlerTaskLogVO): string => {
   if (row.status === 'processing') {
-    return '爬取中...';
+    return '抓取中...';
   }
-  return '再爬取';
+  return '再抓取';
 };
 
 // 获取分析状态类型
@@ -372,11 +372,11 @@ const handleReAnalyze = (row: CrawlerTaskLogVO) => {
   emit('reAnalyze', row.taskId);
 };
 
-// 处理再爬取操作（直接弹出确认）
+// 处理再抓取操作（直接弹出确认）
 const handleReCrawl = (row: CrawlerTaskLogVO) => {
   ElMessageBox.confirm(
-    '将用原配置重新爬取，确定吗？',
-    '确认再爬取',
+    '将用原配置重新抓取，确定吗？',
+    '确认再抓取',
     {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
