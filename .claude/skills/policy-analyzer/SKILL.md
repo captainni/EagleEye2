@@ -12,7 +12,10 @@ description: 政策文章分析 AI 工具。读取政策文章 Markdown 内容�
 用户提供政策文章的 Markdown 内容，即可进行深度分析。如需评估相关度，可同时提供用户产品信息。
 
 ## 输出格式
-**必须严格遵守以下格式要求**：
+
+**CRITICAL - JSON 输出格式要求**
+
+⚠️ **必须严格遵守以下格式，否则会导致解析失败！**
 
 1. **只返回纯 JSON 对象**，格式：`{"key": "value"}`
 2. **绝对不要使用任何 markdown 标记**，包括：
@@ -21,6 +24,8 @@ description: 政策文章分析 AI 工具。读取政策文章 Markdown 内容�
    - ❌ 不要添加任何解释文字
 3. **输出必须从 `{` 开始，以 `}` 结束**
 4. **中文引号必须转义或使用英文引号**
+
+**这是你唯一需要输出的内容，不要添加任何额外文字！**
 
 JSON 必须包含以下字段：`policyType`、`importance`、`relevance`、`areas`、`summary`、`keyPoints`、`impactAnalysis`、`suggestions`
 

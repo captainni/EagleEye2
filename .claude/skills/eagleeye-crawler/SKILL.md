@@ -245,3 +245,29 @@ crawl_files/
 4. 批次文件夹包含时间戳和 shortTaskId，避免覆盖
 5. **CRITICAL**：生成 metadata.json 时，必须将标题中的双引号替换单引号，否则会导致后端 JSON 解析失败
 6. Dev Browser 服务器会在首次使用时自动启动，无需手动操作
+
+## CLI 输出格式（CRITICAL）
+
+当通过 proxy-service 调用时（使用 `--output-format=json`），skill 完成后**必须**输出以下 JSON 格式作为最后一条输出：
+
+```json
+{
+  "success": true,
+  "batchId": "{timestamp}_{sourceName}_{shortTaskId}",
+  "outputDir": "{完整输出目录路径}",
+  "articleCount": 3,
+  "message": "爬取完成"
+}
+```
+
+**执行顺序**：
+1. 完成所有文件爬取和保存
+2. 生成 metadata.json
+3. 生成 summary.md
+4. **最后输出上述 JSON**（必须是最后一条输出）
+
+**注意事项**：
+- 不要在 JSON 前输出表格或其他格式
+- 确保 JSON 是完整且有效的
+- batchId 必须与实际文件夹名一致
+- articleCount 必须是实际爬取的文章数量
