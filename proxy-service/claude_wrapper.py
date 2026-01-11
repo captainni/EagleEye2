@@ -20,6 +20,86 @@ from claude_agent_sdk import (
 )
 
 
+def format_tool_input(tool_name: str, tool_input: dict) -> str:
+    """
+    格式化工具输入参数为易读的描述
+
+    Args:
+        tool_name: 工具名称
+        tool_input: 工具输入参数字典
+
+    Returns:
+        str: 格式化后的描述（最大 80 字符）
+    """
+    try:
+        if tool_name == "Bash":
+            cmd = tool_input.get("command", "")
+            # 提取命令的关键部分
+            if cmd.startswith("cd "):
+                parts = cmd[3:].split()
+                return f"cd {parts[0]}" if parts else "cd"
+            elif cmd.startswith("curl "):
+                # 提取 URL
+                import shlex
+                parts = shlex.split(cmd)
+                for part in parts:
+                    if part.startswith("http"):
+                        return f"curl {part[:60]}"
+                return "curl ..."
+            elif "&&" in cmd:
+                # 显示第一个命令
+                first_cmd = cmd.split("&&")[0].strip()
+                return first_cmd[:60]
+            else:
+                # 显示命令的前 60 个字符
+                return cmd[:60]
+
+        elif tool_name == "Read":
+            path = tool_input.get("file_path", "")
+            return f"Read: {path}"
+
+        elif tool_name == "Write":
+            path = tool_input.get("file_path", "")
+            return f"Write: {path}"
+
+        elif tool_name == "Edit":
+            path = tool_input.get("file_path", "")
+            return f"Edit: {path}"
+
+        elif tool_name == "Glob":
+            pattern = tool_input.get("pattern", "")
+            return f"Glob: {pattern[:50]}"
+
+        elif tool_name == "Grep":
+            pattern = tool_input.get("pattern", "")
+            path = tool_input.get("path", ".")
+            return f"Grep: {pattern[:30]} in {path[:30]}"
+
+        elif tool_name == "Skill":
+            skill = tool_input.get("skill", "")
+            return f"Skill: {skill}"
+
+        elif tool_name == "TodoWrite":
+            return "TodoWrite"
+
+        elif tool_name == "Task":
+            subagent_type = tool_input.get("subagent_type", "")
+            description = tool_input.get("description", "")
+            return f"Task: {subagent_type} - {description[:30]}"
+
+        elif tool_name.startswith("mcp__"):
+            # MCP 工具
+            return f"MCP: {tool_name[:40]}"
+
+        else:
+            # 其他工具，显示输入的字符串表示
+            return str(tool_input)[:60]
+
+    except Exception:
+        # 格式化失败时返回简单描述
+        return f"{tool_name} (input)"
+
+
 async def query_claude(
     prompt: str,
     logger: logging.Logger,
@@ -88,10 +168,12 @@ async def query_claude(
                             # 工具调用
                             tool_info = {
                                 "name": block.name,
-                                "input": str(block.input)[:200],  # 截断过长的输入
+                                "input": block.input,  # 保存原始字典用于格式化
                             }
                             tool_calls.append(tool_info)
-                            logger.info(f"[{task_id}] 工具调用: {block.name}")
+                            # 实时记录格式化的工具描述
+                            tool_desc = format_tool_input(block.name, block.input)
+                            logger.info(f"[{task_id}] 工具调用: {tool_desc}")
 
                 elif isinstance(message, ResultMessage):
                     # 最终结果消息
@@ -112,7 +194,8 @@ async def query_claude(
         if tool_calls:
             logger.info(f"[{task_id}] 工具调用总数: {len(tool_calls)}")
             for i, call in enumerate(tool_calls, 1):
-                logger.info(f"[{task_id}]   {i}. {call['name']}")
+                desc = format_tool_input(call['name'], call.get('input', {}))
+                logger.info(f"[{task_id}]   {i}. {desc}")
 
         full_output = "".join(output_parts)
         logger.info(f"[{task_id}] 输出总长度: {len(full_output)} 字符")
