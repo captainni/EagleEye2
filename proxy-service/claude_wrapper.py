@@ -107,6 +107,7 @@ async def query_claude(
     allowed_tools: Optional[list[str]] = None,
     working_dir: str = "/home/captain/projects/EagleEye2",
     max_turns: int = 50,
+    task_name: str = "通用任务",
 ) -> str:
     """
     使用 Claude Agent SDK 执行查询
@@ -118,6 +119,7 @@ async def query_claude(
         allowed_tools: 允许使用的工具列表（如 ["Read", "Write", "Bash"]）
         working_dir: 工作目录
         max_turns: 最大对话轮数
+        task_name: 任务名称（用于日志标识，如"政策分析"、"竞品分析"）
 
     Returns:
         str: Claude 的完整输出（文本部分）
@@ -132,6 +134,7 @@ async def query_claude(
     task_id = f"claude_query_{int(start_time)}"
 
     logger.info("=" * 50)
+    logger.info(f"[{task_id}] 任务类型: {task_name}")
     logger.info(f"[{task_id}] 开始 Claude SDK 查询")
     logger.info(f"[{task_id}] Prompt 长度: {len(prompt)} 字符")
     logger.info(f"[{task_id}] 超时设置: {timeout}s")

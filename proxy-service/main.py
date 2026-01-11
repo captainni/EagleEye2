@@ -109,6 +109,19 @@ async def analyze_policy(req: Request):
         claude_logger.info(f"内容长度: {len(content)} 字符")
         claude_logger.info(f"有产品信息: {'是' if products else '否'}")
 
+        # 提取文章标题用于日志
+        article_title = "未知标题"
+        content_lines = content.strip().split('\n')
+        for line in content_lines[:5]:
+            line = line.strip()
+            if line.startswith('#') or (line and not line.startswith('**') and len(line) < 100):
+                # 移除 # 标记获取标题
+                title = line.lstrip('#').strip()
+                if title and len(title) > 2 and len(title) < 150:
+                    article_title = title
+                    break
+        claude_logger.info(f"文章标题: {article_title[:80]}")
+
         # 构建产品上下文（如果有）
         products_context = ""
         if products:
@@ -159,6 +172,7 @@ async def analyze_policy(req: Request):
                 logger=claude_logger,
                 timeout=ANALYSIS_TIMEOUT,
                 working_dir="/home/captain/projects/EagleEye2",
+                task_name=f"政策分析: {article_title[:50]}",
             )
 
             elapsed = time.time() - start_time
@@ -218,6 +232,19 @@ async def analyze_competitor(req: Request):
         claude_logger.info(f"内容长度: {len(content)} 字符")
         claude_logger.info(f"有产品信息: {'是' if user_products else '否'}")
 
+        # 提取文章标题用于日志
+        article_title = "未知标题"
+        content_lines = content.strip().split('\n')
+        for line in content_lines[:5]:
+            line = line.strip()
+            if line.startswith('#') or (line and not line.startswith('**') and len(line) < 100):
+                # 移除 # 标记获取标题
+                title = line.lstrip('#').strip()
+                if title and len(title) > 2 and len(title) < 150:
+                    article_title = title
+                    break
+        claude_logger.info(f"文章标题: {article_title[:80]}")
+
         # 构建产品上下文（如果有）
         products_context = ""
         if user_products:
@@ -270,6 +297,7 @@ async def analyze_competitor(req: Request):
                 logger=claude_logger,
                 timeout=ANALYSIS_TIMEOUT,
                 working_dir="/home/captain/projects/EagleEye2",
+                task_name=f"竞品分析: {article_title[:50]}",
             )
 
             elapsed = time.time() - start_time
@@ -369,6 +397,7 @@ async def _crawl_with_skill(req: CrawlRequest):
             working_dir="/home/captain/projects/EagleEye2",
             allowed_tools=["Read", "Write", "Bash", "Glob", "Grep"],  # 爬虫需要的工具
             max_turns=100,  # 爬虫任务需要更多轮次
+            task_name=f"爬虫任务({req.sourceName})",
         )
 
         elapsed = time.time() - start_time
